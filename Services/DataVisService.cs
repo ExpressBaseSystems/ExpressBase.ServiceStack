@@ -96,6 +96,8 @@ namespace ExpressBase.ServiceStack
 
         List<DVBaseColumn> ExcelColumns = new List<DVBaseColumn>();
 
+        private string ExcelLastColumnName = null;
+
         bool showCheckboxColumn = false;
 
         SheetData partSheetData = new SheetData();
@@ -336,6 +338,8 @@ namespace ExpressBase.ServiceStack
                     IsExcel = true,
                     Params = req.Params,
                     TFilters = req.TFilters,
+                    CurrentRowGroup = req.CurrentRowGroup,
+                    OrderBy = req.OrderBy,
                     eb_Solution = GetSolutionObject(req.SolnId),
                     UserAuthId = req.UserAuthId
                 };
@@ -914,18 +918,28 @@ namespace ExpressBase.ServiceStack
         {
             Regex rx = new Regex(@"\$(.*?)\$");//Replace PlaceHolder. Eg: $AND PH(v.id, acmaster1_id)$
             string placeHolder, str;
+            List<string> processedPH = new List<string>();
+            List<TFilters> ProcessedTFilters = new List<TFilters>();
             Match match = rx.Match(Qry);
             while (match.Success)
             {
                 placeHolder = match.Value.ToString().Trim();
-                str = GetProcessedValueOfPH(placeHolder, TFilters);
+                if (processedPH.Contains(placeHolder))
+                {
+                    match = match.NextMatch();
+                    continue;
+                }
+                processedPH.Add(placeHolder);
+                str = GetProcessedValueOfPH(placeHolder, TFilters, ProcessedTFilters);
                 Qry = Qry.Replace(placeHolder, str);
                 match = match.NextMatch();
             }
+            foreach (TFilters TFilter in ProcessedTFilters)
+                TFilters.Remove(TFilter);
             return Qry;
         }
 
-        private string GetProcessedValueOfPH(string placeHolder, List<TFilters> TFilters)
+        private string GetProcessedValueOfPH(string placeHolder, List<TFilters> TFilters, List<TFilters> ProcessedTFilters)
         {
             string ProcessedValue = string.Empty;
             string LogicOp = string.Empty;
@@ -944,7 +958,7 @@ namespace ExpressBase.ServiceStack
 
             if (TFilters == null || TFilters.Count == 0)
             {
-                ProcessedValue = $" {LogicOp} TRUE";
+                ProcessedValue = string.Empty;
             }
             else if (placeHolder.Substring(0, 2).ToUpper() == "PH")
             {
@@ -955,21 +969,24 @@ namespace ExpressBase.ServiceStack
                 {
                     parts[0] = parts[0].Trim();//PH key
                     parts[1] = parts[1].Trim().ToLower();//PH value
-                    TFilters TFilter = TFilters.Find(e => e.Column == parts[1]);
-                    if (TFilter != null && !string.IsNullOrWhiteSpace(TFilter.Value))
+                    List<TFilters> __TFilters = TFilters.FindAll(e => e.Column == parts[1]);
+                    foreach (TFilters TFilter in __TFilters)
                     {
-                        ProcessedValue = GetProcessedValueOfPhKey(parts[0], TFilter);
-                        ProcessedValue = $" {LogicOp} {ProcessedValue}";
-                        TFilters.Remove(TFilter);
-                    }
-                    else
-                    {
-                        ProcessedValue = $" {LogicOp} TRUE";
+                        if (TFilter != null && !string.IsNullOrWhiteSpace(TFilter.Value))
+                        {
+                            ProcessedValue += $" {LogicOp} {GetProcessedValueOfPhKey(parts[0], TFilter)}";
+                            if (!ProcessedTFilters.Contains(TFilter))
+                                ProcessedTFilters.Add(TFilter);
+                        }
+                        else
+                        {
+                            ProcessedValue += string.Empty;
+                        }
                     }
                 }
                 else
                 {
-                    ProcessedValue = $" {LogicOp} TRUE";
+                    ProcessedValue = string.Empty;
                 }
             }
             return ProcessedValue;
@@ -1435,18 +1452,28 @@ namespace ExpressBase.ServiceStack
                     }
                     else
                     {
-                        for (int i = 0; i < rows.Count; i++)
+                        if (_isexcel)
                         {
-                            if (_isexcel)
+                            if ((_dv as EbTableVisualization) != null)
                             {
-                                Row workRow = GetWorkRow(i);
-                                DataTable2FormatedTable4Excel(rows[i], _dv, _user_culture, _user, ref _formattedTable, ref globals, _isexcel, ref Summary, i, rows.Count, workRow);
+                                int incr = 0;
+                                ExcelRowcount++;
+                                for (int i = 0; i < rows.Count; i++)
+                                {
+                                    ProcessDataRow4Excel(rows[i], _dv, _user_culture, _user, ref _formattedTable, ref globals, ref Summary, i, rows.Count, ref incr,
+                                        isRowgrouping, IsMultiLevelRowGrouping, ref RowGrouping, ref PreviousGroupingText, ref CurSortIndex, ref SerialCount, dvColCount, TotalLevels, ref AggregateColumnIndexes, ref RowGroupingColumns);
+                                }
                             }
-                            else
+                        }
+                        else
+                        {
+                            for (int i = 0; i < rows.Count; i++)
+                            {
                                 DataTable2FormatedTable(rows[i], _dv, _user_culture, _user, ref _formattedTable, ref globals, bObfuscute, _isexcel, ref Summary, i, rows.Count);
 
-                            if (isRowgrouping)
-                                DoRowGroupingCommon(rows[i], _dv, _user_culture, _user, ref _formattedTable, IsMultiLevelRowGrouping, ref RowGrouping, ref PreviousGroupingText, ref CurSortIndex, ref SerialCount, i, dvColCount, TotalLevels, ref AggregateColumnIndexes, ref RowGroupingColumns, rows.Count);
+                                if (isRowgrouping)
+                                    DoRowGroupingCommon(rows[i], _dv, _user_culture, _user, ref _formattedTable, IsMultiLevelRowGrouping, ref RowGrouping, ref PreviousGroupingText, ref CurSortIndex, ref SerialCount, i, dvColCount, TotalLevels, ref AggregateColumnIndexes, ref RowGroupingColumns, rows.Count);
+                            }
                         }
                     }
 
@@ -1479,6 +1506,160 @@ namespace ExpressBase.ServiceStack
                 this._Responsestatus.Message = e.Message;
             }
             return null;
+        }
+
+        //new
+        public void ProcessDataRow4Excel(EbDataRow row, EbDataVisualization _dv, CultureInfo _user_culture, User _user, ref EbDataTable _formattedTable,
+            ref EbVisualizationGlobals globals, ref Dictionary<int, List<object>> Summary, int i, int count, ref int incr,
+            bool isRowgrouping, bool IsMultiLevelRowGrouping, ref Dictionary<string, GroupingDetails> RowGrouping, ref string PreviousGroupingText, ref int CurSortIndex,
+            ref int SerialCount, int dvColCount, int TotalLevels, ref List<int> AggregateColumnIndexes, ref List<DVBaseColumn> RowGroupingColumns)
+        {
+            bool isnotAdded = true;
+            try
+            {
+                Row workRow;
+
+                IntermediateDic = new Dictionary<int, object>();
+                _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
+                _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i + 1;//serial
+                CreateIntermediateDict(row, _dv, _user_culture, _user, ref _formattedTable, ref globals, true, i);
+
+                if (isRowgrouping)
+                {
+                    string prevGroupingText = PreviousGroupingText;
+                    DoRowGroupingCommon(row, _dv, _user_culture, _user, ref _formattedTable, IsMultiLevelRowGrouping, ref RowGrouping, ref PreviousGroupingText, ref CurSortIndex, ref SerialCount, i, dvColCount, TotalLevels, ref AggregateColumnIndexes, ref RowGroupingColumns, count);
+                    if (prevGroupingText != PreviousGroupingText)
+                    {
+                        if (prevGroupingText != string.Empty)
+                        {
+                            workRow = GetWorkRow(i);
+                            FooterGroupingDetails det = (FooterGroupingDetails)RowGrouping[FooterPrefix + prevGroupingText];
+                            foreach (KeyValuePair<int, NumericAggregates> ss in det.Aggregations)
+                            {
+                                int xelColIdx = DictDataColIndexToExcelColIndex[ss.Key];
+                                string cellReference = DictExcelColumnNames[xelColIdx] + (i + ExcelRowcount);
+                                Cell cell = workRow.Elements<Cell>().Where(c => c.CellReference.Value == cellReference).First();
+                                cell.CellValue = new CellValue(ss.Value.Sum.ToString());
+                                cell.DataType = ResolveCellDataTypeOnValue(ss.Value.Sum.ToString());
+                                cell.StyleIndex = 4U;
+                            }
+                            partSheetData.Append(workRow);
+                            ExcelRowcount++;
+                        }
+
+                        workRow = new Row();
+                        string txt = RowGroupingColumns[RowGrouping[HeaderPrefix + PreviousGroupingText].CurrentLevel - 1].sTitle + " : " + PreviousGroupingText;
+                        workRow.Append(CreateCell(txt, 5U));
+                        mergeCells.Append(new MergeCell() { Reference = new StringValue($"A{i + ExcelRowcount}:{ExcelLastColumnName}{i + ExcelRowcount}") });
+                        partSheetData.Append(workRow);
+                        ExcelRowcount++;
+
+                    }
+                }
+
+                workRow = GetWorkRow(i);
+
+                for (int m = 0; m < dependencyTable.Count; m++)
+                {
+                    DVBaseColumn col = dependencyTable[m];
+                    isnotAdded = true;
+                    //int ExcelColIndex = ExcelColumns.FindIndex(_col => _col.Name == col.Name) + 1;
+                    int ExcelColIndex = DictExcelColumns.ContainsKey(col.Name) ? DictExcelColumns[col.Name] + 1 : 0;
+                    try
+                    {
+                        CultureInfo cults = col.GetColumnCultureInfo(_user_culture);
+                        object _unformattedData = row[col.Data] ?? "";
+                        object _formattedData = IntermediateDic[col.Data] ?? "";
+                        //object ActualFormatteddata = IntermediateDic[col.Data] == null || col is DVActionColumn ? "" : Convert.ToString(IntermediateDic[col.Data]).Replace("<", "").Replace(">", "").Replace("'", "").Replace("\"", "");
+                        object ExcelData = _formattedData;
+
+                        if (col.RenderType == EbDbTypes.Decimal || col.RenderType == EbDbTypes.Int32 || col.RenderType == EbDbTypes.Int64)
+                        {
+                            SummaryCalc(ref Summary, col, _unformattedData, cults, ExcelColIndex);
+                            ExcelData = _unformattedData;
+                        }
+                        else if (col.RenderType == EbDbTypes.String && col.bVisible)
+                        {
+                            if (col is DVStringColumn && (col as DVStringColumn).RenderAs == StringRenderType.Image)
+                            {
+                                isnotAdded = false;
+                                int _height = (col as DVStringColumn).ImageHeight == 0 ? 40 : (col as DVStringColumn).ImageHeight;
+                                int _width = (col as DVStringColumn).ImageWidth == 0 ? 40 : (col as DVStringColumn).ImageWidth;
+                                string _quality = (col as DVStringColumn).ImageQuality.ToString().ToLower();
+                                int rowIndex = i + ExcelRowcount;
+                                int imgid = Convert.ToInt32(_unformattedData);
+                                workRow.Height = _height;
+                                workRow.CustomHeight = true;
+                                if (imgid > 0)
+                                {
+                                    Stream imageStream = GetImageStream(imgid);
+                                    if (imageStream != null)
+                                        InsertImage(worksheetPart1, rowIndex - 1, ExcelColIndex - 1, imageStream);
+                                }
+                            }
+                        }
+
+                        _formattedTable.Rows[i][col.Data] = _formattedData;
+                        if (i + 1 == count)
+                        {
+                            SummaryCalcAverage(ref Summary, col, cults, count, ExcelColIndex);
+                        }
+                        if (isnotAdded && ExcelColIndex > 0)
+                        {
+                            string cellReference = DictExcelColumnNames[ExcelColIndex] + (i + ExcelRowcount);
+                            Cell cell = workRow.Elements<Cell>().Where(c => c.CellReference.Value == cellReference).First();
+                            cell.CellValue = new CellValue(ExcelData.ToString());
+                            cell.DataType = ResolveCellDataTypeOnValue(ExcelData.ToString());
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Log.Info("PreProcessing data from IntermediateDictionay datatable Exception........." + e.Message + e.StackTrace + "Column Name  ......" + col.Name);
+                        this._Responsestatus.Message = e.Message;
+                    }
+                }
+                partSheetData.Append(workRow);
+                if (i + 1 == count)
+                {
+                    ExcelRowcount++;
+                    if (isRowgrouping)
+                    {
+                        foreach (KeyValuePair<string, GroupingDetails> grpKv in RowGrouping)
+                        {
+                            if (grpKv.Value.RowIndex == i && grpKv.Value is FooterGroupingDetails grpFoot)
+                            {
+                                workRow = GetWorkRow(i);
+                                foreach (KeyValuePair<int, NumericAggregates> ss in grpFoot.Aggregations)
+                                {
+                                    int xelColIdx = DictDataColIndexToExcelColIndex[ss.Key]; //dependencyTable.FindIndex(e => e.Data == ss.Key);                                
+                                    string cellReference = DictExcelColumnNames[xelColIdx] + (i + ExcelRowcount);
+                                    Cell cell = workRow.Elements<Cell>().Where(c => c.CellReference.Value == cellReference).First();
+                                    cell.CellValue = new CellValue(ss.Value.Sum.ToString());
+                                    cell.DataType = ResolveCellDataTypeOnValue(ss.Value.Sum.ToString());
+                                    cell.StyleIndex = 4U;
+                                }
+                                partSheetData.Append(workRow);
+                                ExcelRowcount++;
+                            }
+                        }
+                    }
+                    workRow = GetWorkRow(i);
+                    foreach (var _key in Summary.Keys)
+                    {
+                        string cellReference = DictExcelColumnNames[_key] + (i + ExcelRowcount);
+                        Cell cell = workRow.Elements<Cell>().Where(c => c.CellReference.Value == cellReference).First();
+                        cell.CellValue = new CellValue(Convert.ToDecimal(Summary[_key][0]).ToString());
+                        cell.DataType = ResolveCellDataTypeOnValue(Convert.ToDecimal(Summary[_key][0]).ToString());
+                        cell.StyleIndex = 4U;
+                    }
+                    partSheetData.Append(workRow);
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Info("DataTable2FormatedTable4Excel Exception........." + e.Message + e.StackTrace);
+                this._Responsestatus.Message = e.Message;
+            }
         }
 
         private void CreatePartsForExcel(SpreadsheetDocument document)
@@ -1523,19 +1704,22 @@ namespace ExpressBase.ServiceStack
         public void CreateHeaderRowForExcel()
         {
             ExcelRowcount = 1;
-            ExcelColumns = _dV.Columns.FindAll(col => col.bVisible && !(col is DVApprovalColumn) && !(col is DVActionColumn)).ToList();
+            ExcelColumns = _dV.Columns.FindAll(col => col.bVisible && col.Name != "id" && !(col is DVApprovalColumn) && !(col is DVActionColumn)).ToList();
             Row workRow = new Row();
             workRow.Append(CreateCell(_dV.DisplayName, 1U));
             partSheetData.Append(workRow);
-            string char1 = GetExcelColumnName(ExcelColumns.Count);
+            ExcelLastColumnName = GetExcelColumnName(ExcelColumns.Count);
             mergeCells = new MergeCells();
-            mergeCells.Append(new MergeCell() { Reference = new StringValue($"A1:{char1}1") });
+            mergeCells.Append(new MergeCell() { Reference = new StringValue($"A1:{ExcelLastColumnName}1") });
+            string st1, st2;
             for (var i = 1; i <= _dV.ParamsList.Count; i++)
             {
-                workRow = new Row();
-                workRow.Append(CreateCell(_dV.ParamsList[i - 1].Name + " = " + _dV.ParamsList[i - 1].Value, 3U));
-                mergeCells.Append(new MergeCell() { Reference = new StringValue($"A{i + 1}:B{i + 1}") });
                 ExcelRowcount++;
+                workRow = new Row();
+                st1 = string.IsNullOrWhiteSpace(_dV.ParamsList[i - 1].NameF) ? _dV.ParamsList[i - 1].Name : _dV.ParamsList[i - 1].NameF;
+                st2 = string.IsNullOrWhiteSpace(_dV.ParamsList[i - 1].ValueF) ? _dV.ParamsList[i - 1].Value : _dV.ParamsList[i - 1].ValueF;
+                workRow.Append(CreateCell(st1 + " = " + st2, 3U));
+                mergeCells.Append(new MergeCell() { Reference = new StringValue($"A{ExcelRowcount}:{ExcelLastColumnName}{ExcelRowcount}") });
                 partSheetData.Append(workRow);
             }
             for (var i = 1; i <= TableFilters.Count; i++)
@@ -1544,7 +1728,7 @@ namespace ExpressBase.ServiceStack
                 var col = ExcelColumns.Find(_col => _col.Name == TableFilters[i - 1].Column);
                 workRow = new Row();
                 workRow.Append(CreateCell(col.sTitle + " " + TableFilters[i - 1].Operator + " " + TableFilters[i - 1].Value, 3U));
-                mergeCells.Append(new MergeCell() { Reference = new StringValue($"A{ExcelRowcount}:B{ExcelRowcount}") });
+                mergeCells.Append(new MergeCell() { Reference = new StringValue($"A{ExcelRowcount}:{ExcelLastColumnName}{ExcelRowcount}") });
                 partSheetData.Append(workRow);
             }
             ExcelRowcount++;
@@ -1554,7 +1738,6 @@ namespace ExpressBase.ServiceStack
                 workRow.Append(CreateCell(ExcelColumns[i].sTitle, 2U));
             }
             partSheetData.Append(workRow);
-            ExcelRowcount++;
         }
 
         private string GetExcelColumnName(int columnNumber)
@@ -1636,6 +1819,11 @@ namespace ExpressBase.ServiceStack
             font3.Append(new FontSize() { Val = 11D });
             font3.Append(new FontName() { Val = "Calibri" });
 
+            Font font4 = new Font();
+            font4.Append(new Bold());
+            font4.Append(new FontSize() { Val = 11D });
+            font4.Append(new FontName() { Val = "Calibri" });
+
 
 
             Fonts fonts = new Fonts();      // <APENDING Fonts>
@@ -1643,9 +1831,30 @@ namespace ExpressBase.ServiceStack
             fonts.Append(font1);
             fonts.Append(font2);
             fonts.Append(font3);
+            fonts.Append(font4);
 
             Fills fills = new Fills();
-            fills.Append(new Fill());
+            Fill fill0 = new Fill(
+                new DocumentFormat.OpenXml.Spreadsheet.PatternFill()
+                {
+                    PatternType = PatternValues.None
+                });
+            Fill fill1 = new Fill(
+                new DocumentFormat.OpenXml.Spreadsheet.PatternFill()
+                {
+                    PatternType = PatternValues.Gray125
+                });
+            Fill fill2 = new Fill(
+                new DocumentFormat.OpenXml.Spreadsheet.PatternFill()
+                {
+                    PatternType = PatternValues.Solid,
+                    ForegroundColor = new DocumentFormat.OpenXml.Spreadsheet.ForegroundColor { Rgb = "FFD9D9D9" },
+                    BackgroundColor = new DocumentFormat.OpenXml.Spreadsheet.BackgroundColor { Indexed = 64 }
+                });
+
+            fills.Append(fill0);
+            fills.Append(fill1);
+            fills.Append(fill2);
 
             Borders borders = new Borders();
             borders.Append(new Border());
@@ -1664,9 +1873,11 @@ namespace ExpressBase.ServiceStack
 
             // <CellFormats>
             CellFormat cellformat0 = new CellFormat() { FontId = 0, FillId = 0, BorderId = 0 }; // Default style : Mandatory | Style ID =0
-            CellFormat cellformat1 = new CellFormat() { FontId = 1, Alignment = alignment };  // Style with Bold text ; Style ID = 1
+            CellFormat cellformat1 = new CellFormat() { FontId = 1, FillId = 1, Alignment = alignment };  // Style with Bold text ; Style ID = 1
             CellFormat cellformat2 = new CellFormat() { FontId = 2, Alignment = alignment1 };  // Style with Bold text ; Style ID = 1
             CellFormat cellformat3 = new CellFormat() { FontId = 3 };  // Style with Bold text ; Style ID = 1
+            CellFormat cellformat4 = new CellFormat() { FontId = 4 };
+            CellFormat cellformat5 = new CellFormat() { FontId = 4, FillId = 2 };
 
             // <APENDING CellFormats>
             CellFormats cellformats = new CellFormats();
@@ -1674,6 +1885,8 @@ namespace ExpressBase.ServiceStack
             cellformats.Append(cellformat1);
             cellformats.Append(cellformat2);
             cellformats.Append(cellformat3);
+            cellformats.Append(cellformat4);
+            cellformats.Append(cellformat5);
 
 
             // Append FONTS, FILLS , BORDERS & CellFormats to stylesheet <Preserve the ORDER>
@@ -1698,7 +1911,7 @@ namespace ExpressBase.ServiceStack
                 Dictionary<string, DynamicObj> _hourCount = new Dictionary<string, DynamicObj>();
                 Dictionary<int, List<object>> summary = new Dictionary<int, List<object>>();
                 CalendarData.InitialColumnsCount = _dataset.Tables.Sum(x => x.Columns.Count);
-                this.CreateCustomcolumn4Calendar(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount, ref summary);
+                this.CreateCustomcolumn4Calendar(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount, ref summary, _user);
                 int _count = (_dv as EbCalendarView).DataColumns.FindAll(col => col.bVisible).Count;
                 List<object> _list = new List<object>();
                 for (int i = 0; i < _count; i++)
@@ -1712,7 +1925,7 @@ namespace ExpressBase.ServiceStack
                 EbDataTable _formattedTable = tempdataset.Tables[0].GetEmptyTable();
                 _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count, "Total", EbDbTypes.Int32));
                 summary.Add(summary.Keys.Last() + 1, new List<object>(_list));
-                _dv.Columns.Add(new DVBaseColumn { Data = _dv.Columns.Count, Name = "Total", sTitle = "Total", Type = EbDbTypes.Int32, RenderType = EbDbTypes.Int32, bVisible = true, AggregateFun = AggregateFun.Sum });
+                _dv.Columns.Add(new DVBaseColumn { Data = _dv.Columns.Count, Name = "Total", sTitle = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Total", Type = EbDbTypes.Int32, RenderType = EbDbTypes.Int32, bVisible = true, AggregateFun = AggregateFun.Sum });
                 _formattedTable.Columns.Add(_formattedTable.NewDataColumn(_dv.Columns.Count, "serial", EbDbTypes.Int32));
                 for (int i = CalendarData.InitialColumnsCount; i < _dv.Columns.Count; i++)
                 {
@@ -1747,7 +1960,7 @@ namespace ExpressBase.ServiceStack
                 EbVisualizationGlobals globals = new EbVisualizationGlobals();
                 Dictionary<string, DynamicObj> _hourCount = new Dictionary<string, DynamicObj>();
                 Dictionary<int, List<object>> summary = new Dictionary<int, List<object>>();
-                this.CreateCustomcolumn4Calendar(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount, ref summary);
+                this.CreateCustomcolumn4Calendar(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount, ref summary, _user);
                 int _count = (_dv as EbCalendarView).DataColumns.FindAll(col => col.bVisible).Count;
                 List<object> _list = new List<object>();
                 for (int i = 0; i < _count; i++)
@@ -1792,7 +2005,7 @@ namespace ExpressBase.ServiceStack
             return null;
         }
 
-        public void CreateCustomcolumn4Calendar(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv, ref Dictionary<string, DynamicObj> _hourCount, ref Dictionary<int, List<object>> summary)
+        public void CreateCustomcolumn4Calendar(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv, ref Dictionary<string, DynamicObj> _hourCount, ref Dictionary<int, List<object>> summary, User _user)
         {
             int i = 0;
             foreach (EbDataTable _table in _dataset.Tables)
@@ -1817,7 +2030,7 @@ namespace ExpressBase.ServiceStack
 
             if ((_dv as EbCalendarView).CalendarType == AttendanceType.DayWise)
             {
-                DayWiseDateColumns(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount, ref summary);
+                DayWiseDateColumns(_dataset, ref tempdataset, Parameters, ref _dv, ref _hourCount, ref summary, _user);
             }
             //else if ((_dv as EbCalendarView).CalendarType == AttendanceType.Hourly)
             //{
@@ -1846,7 +2059,7 @@ namespace ExpressBase.ServiceStack
             }
         }
 
-        public void DayWiseDateColumns(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv, ref Dictionary<string, DynamicObj> _hourCount, ref Dictionary<int, List<object>> summary)
+        public void DayWiseDateColumns(EbDataSet _dataset, ref EbDataSet tempdataset, List<Param> Parameters, ref EbDataVisualization _dv, ref Dictionary<string, DynamicObj> _hourCount, ref Dictionary<int, List<object>> summary, User _user)
         {
             int index = tempdataset.Tables[0].Columns.Count;
             int i = -1;
@@ -1859,7 +2072,7 @@ namespace ExpressBase.ServiceStack
                 var endDate = new DateTime(date.Year, date.Month, date.Day, 23, 59, 59);
                 var key = GetKey(startDate, endDate);
                 string _tooltip = date.ToString("dd-MM-yyyy");
-                string _title = date.ToString("ddd")[0] + "</br>" + date.ToString("dd");
+                string _title = date.ToString("ddd") + "</br>" + date.ToString("dd MMM yyyy");
                 tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = key, Type = EbDbTypes.String });
                 i++;
                 if (Modifydv)
@@ -1884,7 +2097,7 @@ namespace ExpressBase.ServiceStack
                             cls = "holiday_class week-holiday";
                         }
                     }
-                    if (DateTime.Now.Date.Equals(date))
+                    if (DateTime.UtcNow.ConvertFromUtc(_user.Preference.TimeZone).Date.Equals(date))
                     {
                         cls += "current_date_class";
                     }
@@ -1980,7 +2193,7 @@ namespace ExpressBase.ServiceStack
                 date = new DateTime(x.Item2.Year, x.Item2.Month, x.Item2.Day, 23, 59, 59);
                 var endDate = DateTimeHelper.EndOfDay(x.Item2);
                 var key = GetKey(startDate, endDate);
-                var _title = "week " + (i + 1);
+                var _title = "Week " + (i + 1) + "<br/>" + x.Item1.ToString("dd-") + x.Item2.ToString("dd MMM yyyy");
                 string _tooltip = x.Item1.ToString("dd-MM-yyyy") + " to " + x.Item2.ToString("dd-MM-yyyy");
                 tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = key, Type = EbDbTypes.String });
                 if (Modifydv)
@@ -2025,7 +2238,7 @@ namespace ExpressBase.ServiceStack
                     date = startDate.AddMonths(1).AddDays(-1);
                     DateTime endDate = new DateTime(y, m, date.Day, 23, 59, 59);
                     string key = GetKey(startDate, endDate);
-                    string title = date.ToString("MMM-yy");
+                    string title = date.ToString("MMM yyyy");
                     string _tooltip = startDate.ToString("dd-MM-yyyy") + " to " + endDate.ToString("dd-MM-yyyy");
                     tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = key, Type = EbDbTypes.String });
                     i++;
@@ -2075,7 +2288,7 @@ namespace ExpressBase.ServiceStack
                     DateTime endDate = new DateTime(y/*date.Year*/, date.Month, date.Day, 23, 59, 59);
                     string key = GetKey(startDate, endDate);
                     string endmonth = DateTimeFormatInfo.CurrentInfo.GetMonthName(date.Month);
-                    string title = "Q" + j + " - '" + y.ToString().Substring(2, 2);
+                    string title = "Q" + j + "<br/>" + startDate.ToString("MMM yyyy") + "-" + endDate.ToString("MMM yyyy");
                     string _tooltip = month + "-" + endmonth + "</br>" + startDate.ToString("dd-MM-yyyy") + " to " + endDate.ToString("dd-MM-yyyy");
                     tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = key, Type = EbDbTypes.String });
                     i++;
@@ -2124,7 +2337,7 @@ namespace ExpressBase.ServiceStack
                     DateTime endDate = new DateTime(y, date.Month, date.Day, 23, 59, 59);
                     string endmonth = DateTimeFormatInfo.CurrentInfo.GetMonthName(date.Month);
                     string key = GetKey(startDate, endDate);
-                    string title = "HF " + j + " - '" + y.ToString().Substring(2, 2);
+                    string title = "HF " + j + "<br/>" + startDate.ToString("MMM yyyy") + "-" + endDate.ToString("MMM yyyy");
                     string _tooltip = startmonth + "-" + endmonth + "</br>" + startDate.ToString("dd-MM-yyyy") + " to " + endDate.ToString("dd-MM-yyyy");
                     tempdataset.Tables[0].Columns.Add(new EbDataColumn { ColumnIndex = index, ColumnName = key, Type = EbDbTypes.String });
                     i++;
@@ -2480,7 +2693,16 @@ namespace ExpressBase.ServiceStack
                                 {
                                     if (_formattedData.ToString() == string.Empty)
                                         _formattedData = "...";
-                                    _formattedData = "<a href='#' class ='tablelinkfromcolumn" + this.TableId + "' data-link='" + row[col.RefidColumn.Data] + "' data-colindex='" + col.Data + "' data-column='" + col.Name + "' data-linkfromcolumn='true'>" + _formattedData + "</a>";
+                                    if (!string.IsNullOrWhiteSpace(Convert.ToString(row[col.RefidColumn.Data])) && int.TryParse(Convert.ToString(row[col.IdColumn.Data]), out int __id) && __id > 0)
+                                        _formattedData = "<a href='#' class ='tablelinkfromcolumn" + this.TableId + "' data-link='" + row[col.RefidColumn.Data] + "' data-colindex='" + col.Data + "' data-column='" + col.Name + "' data-linkfromcolumn='true'>" + _formattedData + "</a>";
+                                }
+
+                                if (col is DVStringColumn && col.RenderType == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.WebformLink && (_isexcel == false))
+                                {
+                                    if (_formattedData.ToString() == string.Empty)
+                                        _formattedData = "...";
+                                    if (int.TryParse(Convert.ToString(row[col.VersionIdColumn.Data]), out int __verid) && __verid > 0 && int.TryParse(Convert.ToString(row[col.DataIdColumn.Data]), out int __id) && __id > 0)
+                                        _formattedData = "<a href='#' class ='webformlink" + this.TableId + "' data-ver='" + __verid + "' data-colindex='" + col.Data + "' data-column='" + col.Name + "' data-id='" + __id + "'>" + _formattedData + "</a>";
                                 }
 
                                 if (col is DVStringColumn && col.RenderType == EbDbTypes.String && (col as DVStringColumn).RenderAs == StringRenderType.Link && col.LinkType == LinkTypeEnum.Tab && (_isexcel == false))/////////////////
@@ -2577,6 +2799,24 @@ namespace ExpressBase.ServiceStack
             }
         }
 
+        private Dictionary<int, int> _dictDataColIndexToExcelColIndex;
+        private Dictionary<int, int> DictDataColIndexToExcelColIndex
+        {
+            get
+            {
+                if (_dictDataColIndexToExcelColIndex == null)
+                {
+                    _dictDataColIndexToExcelColIndex = new Dictionary<int, int>();
+                    for (int i = 0; i < ExcelColumns.Count; i++)
+                    {
+                        if (!_dictDataColIndexToExcelColIndex.ContainsKey(ExcelColumns[i].Data))
+                            _dictDataColIndexToExcelColIndex.Add(ExcelColumns[i].Data, i + 1);
+                    }
+                }
+                return _dictDataColIndexToExcelColIndex;
+            }
+        }
+
         private Dictionary<int, string> _dictExcelColumnNames;
         private Dictionary<int, string> DictExcelColumnNames
         {
@@ -2631,6 +2871,7 @@ namespace ExpressBase.ServiceStack
                 _formattedTable.Rows.Add(_formattedTable.NewDataRow2());
                 _formattedTable.Rows[i][_formattedTable.Columns.Count - 1] = i + 1;//serial
                 CreateIntermediateDict(row, _dv, _user_culture, _user, ref _formattedTable, ref globals, _isexcel, i);
+
                 if ((_dv as EbTableVisualization) != null)
                 {
                     for (int m = 0; m < dependencyTable.Count; m++)
@@ -2963,7 +3204,7 @@ namespace ExpressBase.ServiceStack
                 formatted += trimmedString + "</br> ";
                 data = data.Remove(0, trimmedString.Length);
                 count++;
-            };
+            }
             if (data.Length > _length)
                 formatted = formatted.Substring(0, formatted.LastIndexOf("</br>")) + " ...";
             else
@@ -4184,6 +4425,24 @@ ORDER BY
             if (Summary.Keys.Contains(col.Data))
             {
                 Summary[col.Data][1] = (Convert.ToDecimal(Summary[col.Data][0]) / count).ToString("N", cults.NumberFormat);
+            }
+        }
+
+        public void SummaryCalc(ref Dictionary<int, List<object>> Summary, DVBaseColumn col, object _unformattedData, CultureInfo cults, int indx)
+        {
+            if ((col as DVNumericColumn).Aggregate)
+            {
+                if (!Summary.Keys.Contains(indx))
+                    Summary.Add(indx, new List<object> { 0, 0 });
+                Summary[indx][0] = (Convert.ToDecimal(Summary[indx][0]) + Convert.ToDecimal(_unformattedData));
+            }
+        }
+
+        public void SummaryCalcAverage(ref Dictionary<int, List<object>> Summary, DVBaseColumn col, CultureInfo cults, int count, int indx)
+        {
+            if (Summary.Keys.Contains(indx))
+            {
+                Summary[indx][1] = (Convert.ToDecimal(Summary[indx][0]) / count).ToString("N", cults.NumberFormat);
             }
         }
 

@@ -342,14 +342,28 @@ namespace ExpressBase.ServiceStack
                         }
 
                         string[] sqlArray = _ds.Sql.Trim().Split(";");
-                        foreach (string _sql in sqlArray)
+                        if (MyDataStore.Vendor == DatabaseVendors.MSSQL)
                         {
-                            if (_sql != string.Empty && !_sql.ToLower().Contains("limit") && !_sql.ToLower().Contains("offset"))
-                                sql += _sql + " LIMIT :limit OFFSET :offset;";
-                            else
+                            foreach (string _sql in sqlArray)
+                            {
+                                //if (_sql != string.Empty && !_sql.ToLower().Contains("limit") && !_sql.ToLower().Contains("offset"))
+                                //    throw new Exception("Offset and limit parameters are required");
+                                //else
                                 sql += _sql + ";";
+                            }
+                            sql = sql.Replace("@and_search", string.Empty).Replace("@orderby", "1");
                         }
-                        sql = sql.Replace(":and_search", string.Empty).Replace(":orderby", "1");
+                        else
+                        {
+                            foreach (string _sql in sqlArray)
+                            {
+                                if (_sql != string.Empty && !_sql.ToLower().Contains("limit") && !_sql.ToLower().Contains("offset"))
+                                    sql += _sql + " LIMIT :limit OFFSET :offset;";
+                                else
+                                    sql += _sql + ";";
+                            }
+                            sql = sql.Replace(":and_search", string.Empty).Replace(":orderby", "1");
+                        }
                         bool _isPaged = true;
 
                         IEnumerable<DbParameter> parameters = DataHelper.GetParams(MyDataStore, _isPaged, request.Params, 0, 0);
@@ -377,6 +391,7 @@ namespace ExpressBase.ServiceStack
             catch (Exception e)
             {
                 Log.Info(">>>>>>>>>>>>>>>>>>>>>>>> dscolumns e.Message: " + e.Message);
+                resp.ResponseStatus = new ResponseStatus { Message = e.Message };
                 this.Redis.Remove(_dsRedisKey);
             }
             return resp;
@@ -575,7 +590,11 @@ END
                     }
 
                     firstsql = firstsql.Replace(";", string.Empty);
-                    if (MyDataStore.Vendor == DatabaseVendors.ORACLE)
+                    if (MyDataStore.Vendor == DatabaseVendors.MSSQL)
+                    {
+
+                    }
+                    else if (MyDataStore.Vendor == DatabaseVendors.ORACLE)
                     {
                         firstsql = "SELECT * FROM ( SELECT a.*,ROWNUM rnum FROM (" + firstsql + ")a WHERE ROWNUM <= :limit+:offset) WHERE rnum > :offset;";
                         //sql1 += "ALTER TABLE T1 DROP COLUMN rnum;SELECT * FROM T1;";
@@ -648,7 +667,7 @@ END
             this.Log.Info("data request");
             DataSourceDataSetResponse resp = null;
             using (var redisReadOnly = this.PooledRedisManager.GetReadOnlyClient())
-                resp = EbObjectsHelper.ExecuteDataset(request.RefId, request.UserId, request.Params, this.EbConnectionFactory, this.Redis, redisReadOnly);
+                resp = EbObjectsHelper.ExecuteDataset(request.RefId, request.UserId, request.Params, this.EbConnectionFactory, this.Redis, redisReadOnly, false);
             return resp;
         }
 

@@ -17,6 +17,7 @@ using ExpressBase.Common.LocationNSolution;
 using ExpressBase.Common.ServiceClients;
 using ServiceStack.Messaging;
 using ExpressBase.Common.Constants;
+using ExpressBase.Common.Helpers;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -38,7 +39,8 @@ namespace ExpressBase.ServiceStack.Services
 SELECT 
   u.id, u.fullname, u.email, u.nickname, u.sex, u.phnoprimary, u.statusid, ut.name, 
   COALESCE(CASE WHEN LENGTH(STRING_AGG(loc.shortname::TEXT, ', ')) > 12 THEN 
-  SUBSTRING(STRING_AGG(loc.shortname::TEXT, ', '), 1, 12) || '...' ELSE STRING_AGG(loc.shortname::TEXT, ', ') END, 'Global') AS locname 
+  SUBSTRING(STRING_AGG(loc.shortname::TEXT, ', '), 1, 12) || '...' ELSE STRING_AGG(loc.shortname::TEXT, ', ') END, 'Global') AS locname,
+  (CASE WHEN api.eb_users_id IS NULL THEN '' ELSE 'Enabled' END) AS apikey
 FROM 
   eb_users u 
 LEFT JOIN eb_user_types ut ON u.eb_user_types_id = ut.id 
@@ -49,7 +51,8 @@ LEFT JOIN
     l.c_type = {(int)EbConstraintTypes.User_Location} AND eb_del = 'F' ORDER BY m.id
 ) cons ON u.id = cons.key_id
 LEFT JOIN eb_locations loc ON loc.id=cons.c_value::INT 
-WHERE COALESCE(u.eb_del, 'F') = 'F' AND COALESCE(ut.eb_del, 'F') = 'F' AND u.id > 1 {show}  GROUP BY u.id, ut.name ORDER BY u.fullname;";
+LEFT JOIN eb_user_api_keys api ON api.eb_users_id=u.id AND api.eb_del='F'
+WHERE COALESCE(u.eb_del, 'F') = 'F' AND COALESCE(ut.eb_del, 'F') = 'F' AND u.id > 1 {show}  GROUP BY u.id, ut.name, api.eb_users_id ORDER BY u.fullname;";
 
             DbParameter[] parameters = { };
 
@@ -68,7 +71,8 @@ WHERE COALESCE(u.eb_del, 'F') = 'F' AND COALESCE(ut.eb_del, 'F') = 'F' AND u.id 
                     Phone_Number = dr[5].ToString(),
                     Status = ((EbUserStatus)Convert.ToInt32(dr[6])).ToString(),
                     User_Type = dr[7].ToString(),
-                    Location = dr[8].ToString()
+                    Location = dr[8].ToString(),
+                    Api_Key = dr[9].ToString()
                 });
             }
             resp.Data = returndata;
@@ -524,6 +528,7 @@ WHERE COALESCE(u.eb_del, 'F') = 'F' AND COALESCE(ut.eb_del, 'F') = 'F' AND u.id 
                     IUserAuth usr = this.Redis.Get<IUserAuth>(authid);
                     if (usr != null)
                         this.Redis.Remove(authid);
+                    this.Redis.Remove($"{request.SolnId}:{request.Id}:{TokenConstants.AC}");
                     //code here to refresh mob app via push msg
                 }
                 catch (Exception ex)
@@ -566,6 +571,109 @@ WHERE COALESCE(u.eb_del, 'F') = 'F' AND COALESCE(ut.eb_del, 'F') = 'F' AND u.id 
             }
 
             return new DeleteUserResponse() { Status = t };
+        }
+
+        public IsApiKeyExistsResponse Post(IsApiKeyExistsRequest request)
+        {
+            IsApiKeyExistsResponse response = new IsApiKeyExistsResponse();
+            try
+            {
+                string sql = $"SELECT id FROM eb_user_api_keys WHERE eb_users_id={request.Id} AND eb_del='F';";
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(sql);
+                if (dt.Rows.Count > 0)
+                    response.KeyId = Convert.ToInt32(dt.Rows[0][0]);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception while checking api key exists: " + ex.Message + ex.StackTrace);
+                response.KeyId = -1;
+                response.ResponseStatus.Message = ex.Message;
+            }
+            return response;
+        }
+
+        public ViewApiKeyResponse Post(ViewApiKeyRequest request)
+        {
+            ViewApiKeyResponse response = new ViewApiKeyResponse();
+
+            try
+            {
+                string sql = $"SELECT api_key FROM eb_user_api_keys WHERE eb_users_id={request.Id} AND eb_del='F';";
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(sql);
+                if (dt.Rows.Count > 0)
+                    response.ApiKey = Convert.ToString(dt.Rows[0][0]);
+                else
+                    response.ApiKey = "No active api key found";
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception while reading api key: " + ex.Message + ex.StackTrace);
+                response.ResponseStatus.Message = ex.Message;
+            }
+            return response;
+        }
+
+        public DeleteApiKeyResponse Post(DeleteApiKeyRequest request)
+        {
+            DeleteApiKeyResponse response = new DeleteApiKeyResponse();
+            try
+            {
+                string sql = $"UPDATE eb_user_api_keys SET eb_del='T', eb_lastmodified_by={request.UserId}, eb_lastmodified_at=NOW() WHERE eb_users_id={request.Id} AND eb_del='F';";
+                response.Status = this.EbConnectionFactory.DataDB.DoNonQuery(sql);
+                this.Redis.Remove($"{request.SolnId}:{request.Id}:{TokenConstants.AC}");
+                if (response.Status == 0)
+                    response.ResponseStatus.Message = "No rows affected";
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception while deleting api key: " + ex.Message + ex.StackTrace);
+                response.ResponseStatus.Message = ex.Message;
+            }
+            return response;
+        }
+
+        public GenerateApiKeyResponse Post(GenerateApiKeyRequest request)
+        {
+            GenerateApiKeyResponse response = new GenerateApiKeyResponse();
+            try
+            {
+                int keyid = 0;
+                string userAuthId = $"{request.SolnId}:{request.Id}:{TokenConstants.AC}";
+                string sql = $"UPDATE eb_user_api_keys SET eb_del='T', eb_lastmodified_by={request.UserId}, eb_lastmodified_at=NOW() WHERE eb_users_id={request.Id} AND eb_del='F';" +
+                    $"INSERT INTO eb_user_api_keys(eb_users_id, eb_created_by, eb_created_at, eb_del) VALUES({request.Id}, {request.UserId}, NOW(), 'T') RETURNING id;";
+
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(sql);
+                this.Redis.Remove(userAuthId);
+                int tblid = Convert.ToInt32(dt.Rows[0][0]);
+
+                string apikey = JwtHelpers.GenerateToken(request.SolnId, request.Id, tblid);
+
+                sql = $"UPDATE eb_user_api_keys SET api_key=@key, eb_del='F' WHERE id={tblid};";
+
+                int t = this.EbConnectionFactory.DataDB.DoNonQuery(sql, new DbParameter[] {
+                    this.EbConnectionFactory.DataDB.GetNewParameter("key", EbDbTypes.String, apikey)
+                });
+
+                if (t > 0)
+                    response.ApiKey = apikey;
+                else
+                    response.ResponseStatus.Message = "No rows affected";
+
+                User user = this.Redis.Get<User>(userAuthId);
+                if (user == null)
+                {
+                    Gateway.Send<UpdateUserObjectResponse>(new UpdateUserObjectRequest() { SolnId = request.SolnId, UserId = request.Id, UserAuthId = userAuthId, WC = TokenConstants.UC });
+                    user = this.Redis.Get<User>(userAuthId);
+                }
+                user.ApiKeyId = tblid;
+                this.Redis.Set(userAuthId, user);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Failed to generate api key: " + ex.Message + ex.StackTrace);
+                response.ResponseStatus.Message = ex.Message;
+            }
+            return response;
         }
 
         //------MY PROFILE------------------------------------------------------

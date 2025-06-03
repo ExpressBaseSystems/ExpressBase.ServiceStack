@@ -16,33 +16,6 @@ namespace ExpressBase.ServiceStack.Services
     {
         public DbClientServices(IEbConnectionFactory _dbf, IEbMqClient _mq) : base(_dbf, _mq) { }
 
-
-        [Authenticate]
-        public EbConnectionFactory GetFactory(bool IsAdminOwn, string ClientSolnid)
-        {
-            EbConnectionFactory factory = null;
-            try
-            {
-                if (IsAdminOwn && ClientSolnid != null)
-                {
-                    RefreshSolutionConnectionsAsyncResponse resp = new RefreshSolutionConnectionsAsyncResponse();
-                    //EbConnectionsConfig conf = EbConnectionsConfigProvider.GetDataCenterConnections();
-                    //conf.DataDbConfig.DatabaseName = ClientSolnid;
-                    factory = new EbConnectionFactory(ClientSolnid, this.Redis);
-                    resp = this.MQClient.Post<RefreshSolutionConnectionsAsyncResponse>(new RefreshSolutionConnectionsBySolutionIdAsyncRequest()
-                    {
-                        SolutionId = ClientSolnid
-                    });
-                }
-                else
-                    factory = this.EbConnectionFactory;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message + e.StackTrace);
-            }
-            return factory;
-        }
         EbDbExplorerTablesDict Table = new EbDbExplorerTablesDict();
         List<object> Row = new List<object>();
         List<string> solutions = new List<string>();
@@ -59,8 +32,7 @@ namespace ExpressBase.ServiceStack.Services
                                         order by function_schema, function_name; ";
             try
             {
-                EbConnectionFactory factory = GetFactory(request.IsAdminOwn, request.ClientSolnid);
-                string sql = factory.DataDB.EB_GETDBCLIENTTTABLES;
+                string sql = this.EbConnectionFactory.DataDB.EB_GETDBCLIENTTTABLES;
                 sql = sql + FuntionQuery;
                 if (request.IsAdminOwn || request.SupportLogin)
                 {
@@ -77,7 +49,7 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else
                     sql = string.Format(sql, "eb_%");
-                EbDataSet dt = factory.DataDB.DoQueries(sql);
+                EbDataSet dt = this.EbConnectionFactory.DataDB.DoQueries(sql);
                 var Data = dt.Tables[0];
                 foreach (var Row in Data.Rows)
                 {
@@ -112,14 +84,15 @@ namespace ExpressBase.ServiceStack.Services
                         ColumnName = Row[1].ToString(),
                         ColumnType = Row[2].ToString()
                     };
-                    Table.TableCollection[Row[0].ToString()].Columns.Add(col);
+                    if (Table.TableCollection.ContainsKey(Row[0].ToString()))
+                        Table.TableCollection[Row[0].ToString()].Columns.Add(col);
                 }
                 Data = dt.Tables[2];
                 foreach (var Row in Data.Rows)
                 {
                     ArrayList column;
 
-                    if (factory.DataDB.Vendor == DatabaseVendors.MYSQL)
+                    if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
                     {
                         string s = Row[3].ToString();
                         column = new ArrayList { s.Split(',') };
@@ -179,7 +152,7 @@ namespace ExpressBase.ServiceStack.Services
                     };
                     Table.FunctionCollection.Add(Fun);
                 }
-                DB_Name = factory.ObjectsDB.DBName;
+                DB_Name = this.EbConnectionFactory.ObjectsDB.DBName;
 
             }
             catch (Exception e)
@@ -209,8 +182,7 @@ namespace ExpressBase.ServiceStack.Services
             string mess = "SUCCESS";
             try
             {
-                EbConnectionFactory factory = GetFactory(request.IsAdminOwn, request.ClientSolnid);
-                _dataset = factory.DataDB.DoQueries(request.Query, new System.Data.Common.DbParameter[0]);
+                _dataset = this.EbConnectionFactory.DataDB.DoQueries(request.Query, new System.Data.Common.DbParameter[0]);
             }
             catch (Exception e)
             {
@@ -227,8 +199,7 @@ namespace ExpressBase.ServiceStack.Services
             string mess = "SUCCESS";
             try
             {
-                EbConnectionFactory factory = GetFactory(request.IsAdminOwn, request.ClientSolnid);
-                res = factory.DataDB.InsertTable(request.Query, new System.Data.Common.DbParameter[0]);
+                res = this.EbConnectionFactory.DataDB.InsertTable(request.Query, new System.Data.Common.DbParameter[0]);
             }
             catch (Exception e)
             {
@@ -245,8 +216,7 @@ namespace ExpressBase.ServiceStack.Services
             string mess = "SUCCESS";
             try
             {
-                EbConnectionFactory factory = GetFactory(request.IsAdminOwn, request.ClientSolnid);
-                res = factory.DataDB.DeleteTable(request.Query, new System.Data.Common.DbParameter[0]);
+                res = this.EbConnectionFactory.DataDB.DeleteTable(request.Query, new System.Data.Common.DbParameter[0]);
             }
             catch (Exception e)
             {
@@ -259,8 +229,7 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public DbClientQueryResponse Post(DbClientDropRequest request)
         {
-            EbConnectionFactory factory = GetFactory(request.IsAdminOwn, request.ClientSolnid);
-            var _dataset = factory.DataDB.DoQueries(request.Query, new System.Data.Common.DbParameter[0]);
+            var _dataset = this.EbConnectionFactory.DataDB.DoQueries(request.Query, new System.Data.Common.DbParameter[0]);
             return new DbClientQueryResponse { Dataset = _dataset };
         }
 
@@ -268,8 +237,7 @@ namespace ExpressBase.ServiceStack.Services
         [Authenticate]
         public DbClientQueryResponse Post(DbClientTruncateRequest request)
         {
-            EbConnectionFactory factory = GetFactory(request.IsAdminOwn, request.ClientSolnid);
-            var _dataset = factory.DataDB.DoQueries(request.Query, new System.Data.Common.DbParameter[0]);
+            var _dataset = this.EbConnectionFactory.DataDB.DoQueries(request.Query, new System.Data.Common.DbParameter[0]);
             return new DbClientQueryResponse { Dataset = _dataset };
         }
 
@@ -281,8 +249,7 @@ namespace ExpressBase.ServiceStack.Services
             string mess = "SUCCESS";
             try
             {
-                EbConnectionFactory factory = GetFactory(request.IsAdminOwn, request.ClientSolnid);
-                res = factory.DataDB.UpdateTable(request.Query, new System.Data.Common.DbParameter[0]);
+                res = this.EbConnectionFactory.DataDB.UpdateTable(request.Query, new System.Data.Common.DbParameter[0]);
             }
             catch (Exception e)
             {
@@ -300,8 +267,7 @@ namespace ExpressBase.ServiceStack.Services
             string mess = "SUCCESS";
             try
             {
-                EbConnectionFactory factory = GetFactory(request.IsAdminOwn, request.ClientSolnid);
-                res = factory.DataDB.AlterTable(request.Query, new System.Data.Common.DbParameter[0]);
+                res = this.EbConnectionFactory.DataDB.AlterTable(request.Query, new System.Data.Common.DbParameter[0]);
             }
             catch (Exception e)
             {
@@ -318,8 +284,7 @@ namespace ExpressBase.ServiceStack.Services
             string mess = "SUCCESS";
             try
             {
-                EbConnectionFactory factory = GetFactory(request.IsAdminOwn, request.ClientSolnid);
-                res = factory.DataDB.CreateTable(request.Query);
+                res = this.EbConnectionFactory.DataDB.CreateTable(request.Query);
             }
             catch (Exception e)
             {

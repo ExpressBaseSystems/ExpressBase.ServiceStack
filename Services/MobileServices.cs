@@ -280,7 +280,8 @@ namespace ExpressBase.ServiceStack.Services
 
             MobileAppSettings appSettings = data.CurrentSolution?.SolutionSettings?.MobileAppSettings;
 
-            if (!data.CurrentUser.IsAdmin() && appSettings?.MaintenanceMode == true)
+            if (!data.CurrentUser.IsAdmin() && !data.CurrentUser.Roles.Contains(SystemRoles.SolutionTester.ToString()) &&
+                appSettings?.MaintenanceMode == true)
             {
                 if (string.IsNullOrWhiteSpace(appSettings.MaintenanceMessage))
                     appSettings.MaintenanceMessage = "Servers under maintenance. Please try after sometime.";
@@ -313,7 +314,7 @@ LEFT JOIN
 ON EOS.eb_obj_ver_id = EOV.id
 WHERE
 	COALESCE(EO.eb_del, 'F') = 'F' AND COALESCE(EOS.id, 0) > 0 AND 
-	(EO.obj_type = 13 OR EO.obj_type = 3) AND 
+	(EO.obj_type = 13 OR EO.obj_type = 3 OR EO.obj_type = 31) AND 
 	COALESCE(EOA.eb_del, 'F') = 'F' AND
 	EA.eb_del = 'F' AND EA.application_type = 2 
 	{0}
@@ -382,7 +383,7 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
 
                         if (appData.AppSettings != null)
                         {
-                            EbDataSet dataset = PullAppConfiguredData(appData.AppSettings, data.CurrentUser.UserId);
+                            EbDataSet dataset = PullAppConfiguredData(appData.AppSettings, data.CurrentUser.UserId, 0);
                             appData.OfflineData.Tables.AddRange(dataset.Tables);
                         }
                     }
@@ -463,6 +464,7 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
                 }
             }
         }
+
         public byte[] GetImage(int refId)
         {
             DownloadFileResponse dfs = null;
@@ -553,7 +555,7 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
             {
                 if (app.AppSettings != null && export)
                 {
-                    EbDataSet ds = PullAppConfiguredData(app.AppSettings, data.CurrentUser.UserId);
+                    EbDataSet ds = PullAppConfiguredData(app.AppSettings, data.CurrentUser.UserId, 0);
                     app.OfflineData.Tables.AddRange(ds.Tables);
                 }
 
@@ -611,16 +613,26 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
             }
         }
 
-        private EbDataSet PullAppConfiguredData(EbMobileSettings Settings, int userid)
+        private EbDataSet PullAppConfiguredData(EbAppSettings Settings, int userid, int locid)
         {
+            List<DataImportMobile> _importDrList;
+
+            if (Settings is EbMobileSettings _mobs)
+                _importDrList = _mobs.DataImport;
+            else if (Settings is EbPosSettings _poss)
+                _importDrList = _poss.DataImport;
+            else
+                _importDrList = new List<DataImportMobile>();
+
             EbDataSet DataSet = new EbDataSet();
             try
             {
                 string FullQry = string.Empty;
                 List<DbParameter> dbParam = new List<DbParameter>();
                 dbParam.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_currentuser_id", EbDbTypes.Int32, userid));
+                dbParam.Add(this.EbConnectionFactory.DataDB.GetNewParameter("eb_loc_id", EbDbTypes.Int32, locid));
 
-                foreach (DataImportMobile DI in Settings.DataImport)
+                foreach (DataImportMobile DI in _importDrList)
                 {
                     int objtype = Convert.ToInt32(DI.RefId.Split(CharConstants.DASH)[2]);
 
@@ -634,7 +646,7 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
                 {
                     DataSet = this.EbConnectionFactory.DataDB.DoQueries(FullQry, dbParam.ToArray());
                     int i = 0;
-                    foreach (DataImportMobile DI in Settings.DataImport)
+                    foreach (DataImportMobile DI in _importDrList)
                     {
                         int objtype = Convert.ToInt32(DI.RefId.Split(CharConstants.DASH)[2]);
                         if (objtype == (int)EbObjectTypes.DataReader)
@@ -1385,5 +1397,127 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
                 }
             }
         }
+
+        public EbPosSolutionData Post(PosSolutionDataRequestV1 request)
+        {
+            EbPosSolutionData data = new EbPosSolutionData();
+            data.CurrentUser = this.GetUserObject(request.UserAuthId);
+            data.CurrentSolution = this.GetSolutionObject(request.SolnId);
+
+            Dictionary<string, object> metaData;
+            if (string.IsNullOrWhiteSpace(request.MetaData))
+                metaData = new Dictionary<string, object>();
+            else
+                metaData = JsonConvert.DeserializeObject<Dictionary<string, object>>(request.MetaData);
+            DateTime date = metaData.ContainsKey("last_sync_ts") ? Convert.ToDateTime(metaData["last_sync_ts"]) : DateTime.MinValue;
+
+            string idcheck = "AND EO.id = ANY(string_to_array(@ids, ',')::int[])";
+            string query = @"
+SELECT 
+	EO.id, EO.obj_name, EO.display_name, EO.obj_type, EOV.version_num, EOV.refid,
+    (CASE WHEN EOV.commit_ts <= :last_sync_ts THEN NULL ELSE EOV.obj_json END) AS obj_json,
+	EA.id AS app_id, EA.applicationname, EA.app_icon, EA.application_type, EA.app_settings
+FROM
+	eb_objects EO
+JOIN eb_objects2application EOA 	ON EOA.obj_id=EO.id
+JOIN eb_applications EA				ON EA.id=EOA.app_id
+JOIN eb_objects_ver EOV 			ON EOV.eb_objects_id = EO.id
+LEFT JOIN 
+	(SELECT MAX(id) AS id, eb_obj_ver_id FROM eb_objects_status WHERE status = 3 GROUP BY eb_obj_ver_id) EOS 
+ON EOS.eb_obj_ver_id = EOV.id
+WHERE
+	COALESCE(EO.eb_del, 'F') = 'F' AND COALESCE(EOS.id, 0) > 0 AND 
+	(EO.obj_type = 30 OR EO.obj_type = 3) AND 
+	COALESCE(EOA.eb_del, 'F') = 'F' AND
+	EA.eb_del = 'F' AND EA.application_type = 4
+	{0}
+ORDER BY 
+	display_name;
+
+SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC'; ";
+
+            try
+            {
+
+
+                if (data.CurrentSolution?.Locations != null && data.CurrentUser != null)
+                {
+                    int loc_id = data.CurrentUser.GeFirstLocationIdFromPermission();
+                    data.Location = data.CurrentSolution.Locations.ContainsKey(loc_id) ? data.CurrentSolution.Locations[loc_id] : null;
+                }
+
+                EbDataSet ds;
+                List<DbParameter> param = new List<DbParameter>()
+                {
+                    this.EbConnectionFactory.DataDB.GetNewParameter("last_sync_ts", EbDbTypes.DateTime, date)
+                };
+
+                if (data.CurrentUser.IsAdmin())
+                {
+                    query = string.Format(query, string.Empty);
+                }
+                else
+                {
+                    string[] Ids = data.CurrentUser.GetAccessIds();
+                    query = string.Format(query, idcheck);
+                    param.Add(this.EbConnectionFactory.DataDB.GetNewParameter("ids", EbDbTypes.String, String.Join(",", Ids)));
+                }
+
+                ds = this.EbConnectionFactory.ObjectsDB.DoQueries(query, param.ToArray());
+
+                data.last_sync_ts = Convert.ToDateTime(ds.Tables[1].Rows[0][0]);
+
+                foreach (EbDataRow row in ds.Tables[0].Rows)
+                {
+                    string appId_s = Convert.ToString(row["app_id"]).PadLeft(3, '0');
+                    string objId_s = Convert.ToString(row["id"]).PadLeft(5, '0');
+                    string pattern = $@"{appId_s}-\d+-{objId_s}-\d+:";
+                    bool App_Objecct_permission_exists = data.CurrentUser.Permissions.Exists(e => Regex.IsMatch(e, pattern));
+                    if (!App_Objecct_permission_exists)
+                        continue;
+
+                    int appId = Convert.ToInt32(row["app_id"]);
+                    AppDataToPos appData = data.Applications.Find(e => e.AppId == appId);
+
+                    if (appData == null)
+                    {
+                        appData = new AppDataToPos
+                        {
+                            AppId = appId,
+                            AppName = row["applicationname"]?.ToString(),
+                            AppIcon = row["app_icon"]?.ToString(),
+                            AppSettings = JsonConvert.DeserializeObject<EbPosSettings>(row["app_settings"]?.ToString())
+                        };
+
+                        data.Applications.Add(appData);
+
+                        if (appData.AppSettings != null)
+                        {
+                            EbDataSet dataset = PullAppConfiguredData(appData.AppSettings, data.CurrentUser.UserId, data.Location != null ? data.Location.LocId : 0);
+                            appData.OfflineData.Tables.AddRange(dataset.Tables);
+                        }
+                    }
+
+                    EbObjectType objType = (EbObjectType)Convert.ToInt32(row["obj_type"]);
+                    if (objType.IntCode == EbObjectTypes.PosForm)
+                    {
+                        appData.PosForms.Add(new PosFormWraper
+                        {
+                            Name = row["obj_name"]?.ToString(),
+                            DisplayName = row["display_name"]?.ToString(),
+                            Version = row["version_num"]?.ToString(),
+                            Json = row["obj_json"]?.ToString(),
+                            RefId = row["refid"]?.ToString()
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("exception at get all application [PosSolutionDataRequestV1] ::" + ex.Message);
+            }
+            return data;
+        }
+
     }
 }

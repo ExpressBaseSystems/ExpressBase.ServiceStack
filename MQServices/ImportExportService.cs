@@ -266,7 +266,8 @@ namespace ExpressBase.ServiceStack.Services
                                         UserId = request.UserId,
                                         UserAuthId = request.UserAuthId,
                                         WhichConsole = request.WhichConsole,
-                                        IsImport = true
+                                        IsImport = true,
+                                        HideInMenu = (obj as IEBRootObject).HideInMenu
                                     };
                                     EbObject_Create_New_ObjectResponse res = Objservice.Post(ds);
                                     RefidMap[obj.RefId] = res.RefId;
@@ -299,7 +300,8 @@ namespace ExpressBase.ServiceStack.Services
                                     WhichConsole = request.WhichConsole,
                                     Relations = _rel_obj_tmp,
                                     Tags = "_tags",
-                                    IsImport = true
+                                    IsImport = true,
+                                    HideInMenu = (obj as IEBRootObject).HideInMenu
                                 };
                                 EbObject_SaveResponse saveRes = Objservice.Post(ss);
                             }

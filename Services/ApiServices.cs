@@ -96,11 +96,14 @@ namespace ExpressBase.ServiceStack.Services
             return globalParams;
         }
 
-        [Authenticate]
+        //[Authenticate]
         public ApiResponse Any(ApiRequest request)
         {
             try
             {
+                this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+                this.StudioServices.EbConnectionFactory = this.EbConnectionFactory;
+
                 if (request.HasRefId())
                 {
                     try

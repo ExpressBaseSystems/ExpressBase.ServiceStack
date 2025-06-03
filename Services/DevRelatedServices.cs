@@ -351,6 +351,8 @@ namespace ExpressBase.ServiceStack.Services
                     settings = JsonConvert.DeserializeObject<EbMobileSettings>(request.Settings);
                 else if (request.AppType == EbApplicationTypes.Web)
                     settings = JsonConvert.DeserializeObject<EbWebSettings>(request.Settings);
+                else if (request.AppType == EbApplicationTypes.Pos)
+                    settings = JsonConvert.DeserializeObject<EbPosSettings>(request.Settings);
 
                 DbParameter[] parameters = {
                     this.EbConnectionFactory.DataDB.GetNewParameter("appid",EbDbTypes.Int32,request.AppId),
