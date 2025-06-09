@@ -167,7 +167,7 @@ namespace ExpressBase.ServiceStack.Services
                 switch (resource)
                 {
                     case EbSqlReader reader:
-                        res.Result = ExecuteDataReader(reader);
+                        res.Result = reader.ExecuteDataReader(this.Api) ;
                         break;
                     case EbSqlWriter writer:
                         res.Result = ExecuteDataWriter(writer);
@@ -199,6 +199,9 @@ namespace ExpressBase.ServiceStack.Services
                     case EbCSVPusher pusher:
                         res.Result = (pusher as EbCSVPusher).ExecuteCSVPusher(this.Api, this, this.FileClient, false);
                         break;
+                    case EbBatchSqlWriter batchWriter:
+                        res.Result = batchWriter.Execute(this.Api, this);
+                        break;
                     //case EbEncrypt encrypt:
                     //    res.Result = (encrypt as EbEncrypt).ExecuteEncrypt(this.Api);
                     //    break;
@@ -228,33 +231,6 @@ namespace ExpressBase.ServiceStack.Services
 
                 throw new ApiException("[GetResult] ," + ex.Message);
             }
-        }
-
-        private object ExecuteDataReader(EbSqlReader sqlReader)
-        {
-            EbDataSet dataSet;
-            try
-            {
-                EbDataReader dataReader = GetEbObject<EbDataReader>(sqlReader.Reference);
-
-                List<DbParameter> dbParameters = new List<DbParameter>();
-
-                List<Param> InputParams = dataReader.GetParams((RedisClient)this.Redis);
-
-                FillParams(InputParams);
-
-                foreach (Param param in InputParams)
-                {
-                    dbParameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter(param.Name, (EbDbTypes)Convert.ToInt32(param.Type), param.ValueTo));
-                }
-
-                dataSet = this.EbConnectionFactory.DataDB.DoQueries(dataReader.Sql, dbParameters.ToArray());
-            }
-            catch (Exception ex)
-            {
-                throw new ApiException("[ExecuteDataReader], " + ex.Message);
-            }
-            return dataSet;
         }
 
         private object ExecuteDataWriter(EbSqlWriter sqlWriter)
@@ -743,7 +719,7 @@ namespace ExpressBase.ServiceStack.Services
                     .ToDictionary(x => x.prop, x => x.val as object);
 
                 if (request.Component is EbSqlReader reader)
-                    request.Component.Result = this.ExecuteDataReader(reader);
+                    request.Component.Result = (reader as EbSqlReader).ExecuteDataReader(this.Api);
                 else if (request.Component is EbSqlWriter writer)
                     request.Component.Result = this.ExecuteDataWriter(writer);
                 else if (request.Component is EbSqlFunc func)
