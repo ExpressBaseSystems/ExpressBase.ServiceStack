@@ -176,10 +176,10 @@ namespace ExpressBase.ServiceStack.Services
                 Data = dt.Tables[3];
                 foreach (var Row in Data.Rows)
                 {
-                    EbDbExplorerFunctions Fun = new EbDbExplorerFunctions()
+                     EbDbExplorerFunctions Fun = new EbDbExplorerFunctions()
                     {
                         FunctionName = Row[1].ToString(),
-                        FunctionQuery = Row[2].ToString()
+                        FunctionQuery = Row[2].ToString(),
                     };
                     Table.FunctionCollection.Add(Fun);
                 }
@@ -295,6 +295,53 @@ namespace ExpressBase.ServiceStack.Services
                 Message = mess
             };
         }
+
+
+
+        [CompressResponse]
+        [Authenticate]
+        public DbClientCreateFunctionResponse Post(DbClientCreateFunctionRequest request)
+        {
+            int result = 0;
+            string message = "Function created successfully";
+            string query = "";
+
+            try
+            {
+                // Validate inputs
+                if (string.IsNullOrEmpty(request.FunctionName) || string.IsNullOrEmpty(request.FunctionCode))
+                {
+                    throw new ArgumentException("Function name and function code must be provided.");
+                }
+
+                // Get the factory for DB access
+                EbConnectionFactory factory = GetFactory(request.IsAdminOwn, request.ClientSolnid);
+
+                // Extract the function SQL code
+                query = request.FunctionCode;
+
+                // Execute the query
+                result = factory.DataDB.CreateFunction(query, new System.Data.Common.DbParameter[0]);
+            }
+            catch (Exception ex)
+            {
+                result = -1;
+                message = "Error: " + ex.Message;
+                if (ex.InnerException != null)
+                {
+                    message += " | Inner Exception: " + ex.InnerException.Message;
+                }
+            }
+
+            return new DbClientCreateFunctionResponse
+            {
+                Result = result,
+                Message = message,
+                FunctionName = request.FunctionName,
+                Type = DBOperations.CREATE_FUNCTION
+            };
+        }
+
 
 
 

@@ -1436,7 +1436,7 @@ Type: {6}", sbreq.fullname, sbreq.solutionid, TktId, sbreq.title, sbreq.descript
 
             try
             {
-                string sql = @"SELECT username, ""value"", eb_created_at, currentUserid 
+                string sql = @"SELECT username, ""value"", eb_created_at 
                        FROM support_ticket_history 
                        WHERE ticket_id = :tktid AND field = 'comment' AND eb_del = 'F'
                        ORDER BY eb_created_at ASC";
@@ -1452,7 +1452,6 @@ Type: {6}", sbreq.fullname, sbreq.solutionid, TktId, sbreq.title, sbreq.descript
                     string username = row["username"]?.ToString();
                     string commentText = row["value"]?.ToString();
                     string createdAtStr = row["eb_created_at"]?.ToString();
-                    string userId = row["currentUserid"]?.ToString();
 
 
                     // Debug print
@@ -1463,7 +1462,6 @@ Type: {6}", sbreq.fullname, sbreq.solutionid, TktId, sbreq.title, sbreq.descript
                         UserName = username ?? "[Unknown]",
                         CommentText = commentText ?? "[No Comment]",
                         CreatedAt = DateTime.TryParse(createdAtStr, out var parsedDate) ? parsedDate : DateTime.MinValue,
-                         UserId = userId ?? ""
 
                     };
 
