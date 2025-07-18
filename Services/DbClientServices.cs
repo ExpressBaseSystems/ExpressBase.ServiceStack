@@ -117,62 +117,45 @@ namespace ExpressBase.ServiceStack.Services
                 Data = dt.Tables[2];
                 foreach (var Row in Data.Rows)
                 {
-                    ArrayList column;
-
-                    if (this.EbConnectionFactory.DataDB.Vendor == DatabaseVendors.MYSQL)
-                    {
-                        string s = Row[3].ToString();
-                        column = new ArrayList { s.Split(',') };
-                    }
-                    else
-                    {
-                        column = new ArrayList { Row[3] };
-                    }
-                    var t = Row[3];
-                    var col = column[0];
-                    var x = (col as string[])[0];
                     string constName = Row[0].ToString();
-                    string[] st = constName.Split("_");
-                    string _name = st[st.Length - 1];
-                    if (_name.Equals("pkey"))
-                    {
-                        foreach (EbDbExplorerColumn obj in Table.TableCollection[Row[2].ToString()].Columns)
-                        {
-                            if (obj.ColumnName.Equals(x))
-                            {
-                                obj.ColumnKey = "Primary key";
-                                obj.ConstraintName = constName;  // <- add this
-                            }
-                        }
-                    }
-                    if (_name.Equals("fkey"))
-                    {
-                        foreach (EbDbExplorerColumn obj in Table.TableCollection[Row[2].ToString()].Columns)
-                        {
-                            if (obj.ColumnName.Equals(x))
-                            {
-                                obj.ColumnKey = "Foreign key";
-                                obj.ConstraintName = constName;  // <- add this
-                                string definition = Row[4].ToString();
-                                string[] df = definition.Split("REFERENCES ");
-                                df[1] = ":: " + df[1];
-                                obj.ColumnTable = df[df.Length - 1];
-                            }
-                        }
-                    }
-                    if (_name.Equals("uniquekey"))
-                    {
-                        foreach (EbDbExplorerColumn obj in Table.TableCollection[Row[2].ToString()].Columns)
-                        {
-                            if (obj.ColumnName.Equals(x))
-                            {
-                                obj.ColumnKey = "Unique key";
-                                obj.ConstraintName = constName;  // <- add this
-                            }
-                        }
-                    }
+                    string[] columns = ((string[])((Array)Row[3])).ToArray(); // Handles multiple columns
+                    string definition = Row[4].ToString();
+                    string lowerConstName = constName.ToLower(); // New line
 
+                    foreach (string colName in columns)
+                    {
+                        if (!Table.TableCollection.ContainsKey(Row[2].ToString()))
+                            continue;
+
+                        var columnObj = Table.TableCollection[Row[2].ToString()].Columns
+                            .FirstOrDefault(c => c.ColumnName == colName);
+
+                        if (columnObj == null) continue;
+
+                        columnObj.ConstraintName = constName;
+
+                        // Updated logic
+                        if (lowerConstName.Contains("pkey"))
+                        {
+                            columnObj.ColumnKey = "Primary key";
+                        }
+                        else if (lowerConstName.Contains("fkey"))
+                        {
+                            columnObj.ColumnKey = "Foreign key";
+                            string[] df = definition.Split("REFERENCES ");
+                            if (df.Length > 1)
+                            {
+                                df[1] = ":: " + df[1];
+                                columnObj.ColumnTable = df[df.Length - 1];
+                            }
+                        }
+                        else if (lowerConstName.Contains("unique_key"))
+                        {
+                            columnObj.ColumnKey = "Unique key";
+                        }
+                    }
                 }
+
                 Data = dt.Tables[3];
                 foreach (var Row in Data.Rows)
                 {
@@ -268,7 +251,14 @@ namespace ExpressBase.ServiceStack.Services
                 }
                 else if (string.Equals(request.ConstraintType, "Unique Key", StringComparison.OrdinalIgnoreCase))
                 {
-                    query = $"ALTER TABLE \"{request.TableName}\" ADD CONSTRAINT \"{request.ConstraintName}\" UNIQUE (\"{request.ColumnName}\")";
+                    // Split by comma, trim spaces, and wrap each column in double quotes
+                    string[] columns = request.ColumnName.Split(',')
+                        .Select(c => $"\"{c.Trim()}\"")
+                        .ToArray();
+
+                    string joinedColumns = string.Join(", ", columns);
+
+                    query = $"ALTER TABLE \"{request.TableName}\" ADD CONSTRAINT \"{request.ConstraintName}\" UNIQUE ({joinedColumns})";
                 }
                 else
                 {
