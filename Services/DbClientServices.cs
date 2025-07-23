@@ -46,95 +46,120 @@ namespace ExpressBase.ServiceStack.Services
         EbDbExplorerTablesDict Table = new EbDbExplorerTablesDict();
         List<object> Row = new List<object>();
         List<string> solutions = new List<string>();
-
         [Authenticate]
         public GetDbTablesResponse Get(GetDbTablesRequest request)
         {
             string DB_Name = "";
             int TableCount = 0;
-            string FuntionQuery = @"select n.nspname as function_schema, p.proname as function_name, pg_get_functiondef(p.oid) as Functions
-                                        from pg_proc p left
-                                        join pg_namespace n on p.pronamespace = n.oid
-                                        where n.nspname not in ('pg_catalog', 'information_schema')
-                                        order by function_schema, function_name; ";
+
+            // Query to get PostgreSQL functions (excluding system schemas)
+            string FuntionQuery = @"
+        SELECT 
+            n.nspname AS function_schema, 
+            p.proname AS function_name, 
+            pg_get_functiondef(p.oid) AS Functions
+        FROM pg_proc p 
+        LEFT JOIN pg_namespace n ON p.pronamespace = n.oid
+        WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
+        ORDER BY function_schema, function_name;";
+
             try
             {
+                // Step 1: Get base SQL from service constant
                 string sql = this.EbConnectionFactory.DataDB.EB_GETDBCLIENTTTABLES;
-                sql = sql + FuntionQuery;
+
+                // Step 2: Append the function query to main SQL (result will be in dt.Tables[3])
+                sql += FuntionQuery;
+
+                // Step 3: Handle solution filtering for admin or support login
                 if (request.IsAdminOwn || request.SupportLogin)
                 {
                     if (request.IsAdminOwn)
                     {
-                        string sql1 = "SELECT isolution_id FROM eb_solutions WHERE eb_del ='F';";
+                        // Get all active solutions
+                        string sql1 = "SELECT isolution_id FROM eb_solutions WHERE eb_del = 'F';";
                         EbDataTable solutionTable = this.InfraConnectionFactory.DataDB.DoQuery(sql1);
+
                         foreach (var Row in solutionTable.Rows)
                         {
                             solutions.Add(Row[0].ToString());
                         }
                     }
-                    sql = string.Format(sql, "");
+
+                    sql = string.Format(sql, ""); // No filter
                 }
                 else
+                {
+                    // Apply filter for eb_ tables only
                     sql = string.Format(sql, "eb_%");
+                }
+
+                // Step 4: Execute combined query
                 EbDataSet dt = this.EbConnectionFactory.DataDB.DoQueries(sql);
+
+                // ------------------ TABLES + INDEXES ------------------
                 var Data = dt.Tables[0];
+
                 foreach (var Row in Data.Rows)
                 {
+                    string tableName = Row[0].ToString();
 
-                    if (Table.TableCollection.ContainsKey(Row[0].ToString()))
+                    if (Table.TableCollection.ContainsKey(tableName))
                     {
-                        // dataItems.Clear();
-                        //tab.Index.Add(dataReader[2].ToString());
-                        Table.TableCollection[Row[0].ToString()].Index.Add(Row[2].ToString());
-                        //continue;
+                        Table.TableCollection[tableName].Index.Add(Row[2].ToString());
                     }
                     else
                     {
-                        //if(Row[0].ToString().IndexOf("eb_ ", StringComparison.OrdinalIgnoreCase) == 0)
+                        var tab = new EbDbExplorerTable
                         {
-                            EbDbExplorerTable tab = new EbDbExplorerTable()
-                            {
-                                Name = Row[0].ToString(),
-                                Schema = Row[1].ToString()
-                            };
-                            Table.TableCollection.Add(Row[0].ToString(), tab);
-                            Table.TableCollection[Row[0].ToString()].Index.Add(Row[2].ToString());
-                            TableCount++;
-                        }
+                            Name = tableName,
+                            Schema = Row[1].ToString()
+                        };
+                        Table.TableCollection.Add(tableName, tab);
+                        Table.TableCollection[tableName].Index.Add(Row[2].ToString());
+                        TableCount++;
                     }
                 }
+
+                // ------------------ COLUMNS ------------------
                 Data = dt.Tables[1];
                 foreach (var Row in Data.Rows)
                 {
-                    EbDbExplorerColumn col = new EbDbExplorerColumn()
+                    EbDbExplorerColumn col = new EbDbExplorerColumn
                     {
                         ColumnName = Row[1].ToString(),
                         ColumnType = Row[2].ToString()
                     };
-                    if (Table.TableCollection.ContainsKey(Row[0].ToString()))
-                        Table.TableCollection[Row[0].ToString()].Columns.Add(col);
+
+                    string tableName = Row[0].ToString();
+                    if (Table.TableCollection.ContainsKey(tableName))
+                    {
+                        Table.TableCollection[tableName].Columns.Add(col);
+                    }
                 }
+
+                // ------------------ CONSTRAINTS ------------------
                 Data = dt.Tables[2];
                 foreach (var Row in Data.Rows)
                 {
                     string constName = Row[0].ToString();
-                    string[] columns = ((string[])((Array)Row[3])).ToArray(); // Handles multiple columns
+                    string[] columns = ((string[])((Array)Row[3])).ToArray();
                     string definition = Row[4].ToString();
-                    string lowerConstName = constName.ToLower(); // New line
+                    string lowerConstName = constName.ToLower();
+                    string tableName = Row[2].ToString();
 
                     foreach (string colName in columns)
                     {
-                        if (!Table.TableCollection.ContainsKey(Row[2].ToString()))
+                        if (!Table.TableCollection.ContainsKey(tableName))
                             continue;
 
-                        var columnObj = Table.TableCollection[Row[2].ToString()].Columns
+                        var columnObj = Table.TableCollection[tableName].Columns
                             .FirstOrDefault(c => c.ColumnName == colName);
 
                         if (columnObj == null) continue;
 
                         columnObj.ConstraintName = constName;
 
-                        // Updated logic
                         if (lowerConstName.Contains("pkey"))
                         {
                             columnObj.ColumnKey = "Primary key";
@@ -142,11 +167,11 @@ namespace ExpressBase.ServiceStack.Services
                         else if (lowerConstName.Contains("fkey"))
                         {
                             columnObj.ColumnKey = "Foreign key";
+
                             string[] df = definition.Split("REFERENCES ");
                             if (df.Length > 1)
                             {
-                                df[1] = ":: " + df[1];
-                                columnObj.ColumnTable = df[df.Length - 1];
+                                columnObj.ColumnTable = ":: " + df[1];
                             }
                         }
                         else if (lowerConstName.Contains("unique_key"))
@@ -156,18 +181,20 @@ namespace ExpressBase.ServiceStack.Services
                     }
                 }
 
+                // ------------------ FUNCTIONS ------------------
                 Data = dt.Tables[3];
                 foreach (var Row in Data.Rows)
                 {
-                     EbDbExplorerFunctions Fun = new EbDbExplorerFunctions()
+                    EbDbExplorerFunctions Fun = new EbDbExplorerFunctions
                     {
                         FunctionName = Row[1].ToString(),
                         FunctionQuery = Row[2].ToString(),
                     };
                     Table.FunctionCollection.Add(Fun);
                 }
-                DB_Name = this.EbConnectionFactory.ObjectsDB.DBName;
 
+                // Save the DB name for reference
+                DB_Name = this.EbConnectionFactory.ObjectsDB.DBName;
             }
             catch (Exception e)
             {
@@ -177,6 +204,8 @@ namespace ExpressBase.ServiceStack.Services
                     Message = e.Message
                 };
             }
+
+            // Final output
             return new GetDbTablesResponse
             {
                 Tables = Table,
@@ -194,16 +223,54 @@ namespace ExpressBase.ServiceStack.Services
         {
             EbDataSet _dataset = null;
             string mess = "SUCCESS";
+
+            // ✅ Step 1: Whitelisted eb_ tables
+            var allowedEbTables = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "eb_files_ref", "eb_files_ref_variations", "eb_role2location", "eb_role2permission",
+        "eb_role2role", "eb_roles", "eb_signin_log", "eb_user2usergroup",
+        "eb_usersanonymous", "eb_usergroup", "eb_users", "eb_userstatus",
+        "eb_public_holidays", "eb_notifications", "eb_user_types", "eb_my_actions",
+        "eb_approval_lines", "eb_sms_logs", "eb_browser_exceptions", "eb_email_logs",
+        "eb_downloads", "eb_fin_years", "eb_fin_years_lines", "eb_files_bytea",
+        "eb_executionlogs", "eb_locations", "eb_location_types"
+    };
+
             try
             {
+                string queryLower = request.Query.ToLower();
+
+                // ✅ Step 2: Find all eb_ tables used in the query
+                var ebTableMatches = System.Text.RegularExpressions.Regex.Matches(
+                    queryLower,
+                    @"\beb_[a-zA-Z0-9_]+\b"
+                );
+
+                // ✅ Step 3: Check for disallowed eb_ tables
+                foreach (System.Text.RegularExpressions.Match match in ebTableMatches)
+                {
+                    var tableName = match.Value;
+                    if (!allowedEbTables.Contains(tableName))
+                    {
+                        throw new Exception($"Access to table '{tableName}' is not allowed.");
+                    }
+                }
+
+                // ✅ Step 4: Execute query only if all eb_ tables are allowed
                 _dataset = this.EbConnectionFactory.DataDB.DoQueries(request.Query, new System.Data.Common.DbParameter[0]);
             }
             catch (Exception e)
             {
                 mess = e.Message;
             }
-            return new DbClientQueryResponse { Dataset = _dataset, Message = mess };
+
+            return new DbClientQueryResponse
+            {
+                Dataset = _dataset,
+                Message = mess
+            };
         }
+
 
         [CompressResponse]
         [Authenticate]
