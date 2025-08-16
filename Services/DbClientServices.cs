@@ -2,11 +2,13 @@
 using ExpressBase.Common.Connections;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.ServiceClients;
+using ExpressBase.Common.Structures;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -215,6 +217,38 @@ namespace ExpressBase.ServiceStack.Services
             };
         }
 
+        private void LogQuery(string queryText, int queryType, int rowsAffected, string solutionId, int? createdByUserId)
+        {
+            try
+            {
+                string logQuery = @"
+        INSERT INTO eb_dbclient_logs 
+        (query, type, rows_affected, solution_id, eb_created_by, eb_created_at, eb_del) 
+        VALUES 
+        (@query, @type, @rows_affected, @solution_id, @eb_created_by, NOW(), 'F')";
+
+                DbParameter[] parameters = new DbParameter[]
+                {
+            this.EbConnectionFactory.DataDB.GetNewParameter("@query", EbDbTypes.String, queryText ?? string.Empty),
+            this.EbConnectionFactory.DataDB.GetNewParameter("@type", EbDbTypes.Int32, queryType),
+            this.EbConnectionFactory.DataDB.GetNewParameter("@rows_affected", EbDbTypes.Int32, rowsAffected),
+            this.EbConnectionFactory.DataDB.GetNewParameter("@solution_id", EbDbTypes.String, solutionId ?? string.Empty),
+            this.EbConnectionFactory.DataDB.GetNewParameter("@eb_created_by", EbDbTypes.Int32, createdByUserId ?? 0)
+                };
+
+                // Debug check before execution
+                foreach (var p in parameters)
+                {
+                    Console.WriteLine($"{p.ParameterName} = {p.Value ?? "NULL"}");
+                }
+
+                this.EbConnectionFactory.DataDB.DoQuery(logQuery, parameters);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("LogQuery failed: " + ex.Message);
+            }
+        }
 
 
         [CompressResponse]
@@ -270,6 +304,87 @@ namespace ExpressBase.ServiceStack.Services
                 Message = mess
             };
         }
+        [CompressResponse]
+        [Authenticate]
+        public List<DbClientLogsResponse> Post(DbClientLogsRequest request)
+        {
+            List<DbClientLogsResponse> logs = new List<DbClientLogsResponse>();
+
+            try
+            {
+                EbConnectionFactory factory = GetFactory(request.IsAdminOwn, request.SolutionId);
+
+                string query = @"
+        SELECT 
+            l.id,
+            l.query,
+            l.type,
+            CASE 
+                WHEN l.rows_affected = -1 THEN 'N/A'
+                WHEN l.type = 1 THEN l.rows_affected || ' row(s) inserted'
+                WHEN l.type = 2 THEN l.rows_affected || ' row(s) updated'
+                WHEN l.type = 3 THEN l.rows_affected || ' row(s) deleted'
+                ELSE l.rows_affected || ' row(s)'
+            END AS rows_result,
+            l.solution_id,
+            u.fullname AS created_by_name,
+            l.eb_created_at
+        FROM eb_dbclient_logs l
+        LEFT JOIN eb_users u ON u.id = l.eb_created_by
+        WHERE l.eb_del = 'F'
+        ";
+
+                List<DbParameter> parameters = new List<DbParameter>();
+
+                if (!string.IsNullOrEmpty(request.SolutionId))
+                {
+                    query += " AND l.solution_id = @solutionId";
+                    parameters.Add(factory.DataDB.GetNewParameter("@solutionId", EbDbTypes.String, request.SolutionId));
+                }
+
+                if (!string.IsNullOrEmpty(request.TableName))
+                {
+                    query += " AND l.query LIKE @tableName";
+                    parameters.Add(factory.DataDB.GetNewParameter("@tableName", EbDbTypes.String, "%" + request.TableName + "%"));
+                }
+
+                query += " ORDER BY l.eb_created_at DESC LIMIT 500";
+
+                // Debug logging to see final query & parameters
+                Console.WriteLine("==== DB CLIENT LOGS QUERY ====");
+                Console.WriteLine(query);
+                foreach (var p in parameters)
+                {
+                    Console.WriteLine($"Param: {p.ParameterName} = {p.Value}");
+                }
+                Console.WriteLine("================================");
+
+                EbDataTable dbResults = factory.DataDB.DoQuery(query, parameters.ToArray());
+
+                foreach (var row in dbResults.Rows)
+                {
+                    logs.Add(new DbClientLogsResponse
+                    {
+                        Id = Convert.ToInt32(row["id"]),
+                        Query = row["query"]?.ToString(),
+                        Type = Convert.ToInt32(row["type"]),
+                        RowsResult = row["rows_result"]?.ToString(),
+                        SolutionId = row["solution_id"]?.ToString(),
+                        CreatedByName = row["created_by_name"]?.ToString(),
+                        CreatedAt = Convert.ToDateTime(row["eb_created_at"])
+                        // ResponseMessage removed (column doesn't exist)
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Failed to fetch logs: " + ex.Message);
+            }
+
+            return logs;
+        }
+
+
 
 
         [CompressResponse]
@@ -278,18 +393,25 @@ namespace ExpressBase.ServiceStack.Services
         {
             int res = 0;
             string mess = "SUCCESSFULLY CREATED INDEX";
+
             try
             {
                 EbConnectionFactory factory = GetFactory(request.IsAdminOwn, request.ClientSolnid);
                 string query = $"CREATE INDEX {request.IndexName} ON {request.TableName} ({request.IndexColumns})";
+
                 res = factory.DataDB.CreateIndex(query, new System.Data.Common.DbParameter[0]);
+
+                // Log query with CREATE_INDEX type
+                LogQuery(query, (int)DBOperations.CREATE_INDEX, res, request.ClientSolnid, request.CreatedByUserId);
             }
             catch (Exception e)
             {
                 mess = e.Message;
             }
+
             return new DbClientIndexResponse { Result = res, Type = DBOperations.CREATE_INDEX, Message = mess };
         }
+
 
 
 
@@ -334,6 +456,8 @@ namespace ExpressBase.ServiceStack.Services
 
                 // Execute the query
                 res = factory.DataDB.CreateConstraint(query, new System.Data.Common.DbParameter[0]);
+                LogQuery(query, (int)DBOperations.CREATE_CONSTRAINT, res, request.ClientSolnid, request.CreatedByUserId);
+
             }
             catch (Exception e)
             {
@@ -379,6 +503,9 @@ namespace ExpressBase.ServiceStack.Services
 
                 // Execute the query
                 result = factory.DataDB.CreateFunction(query, new System.Data.Common.DbParameter[0]);
+                LogQuery(query, (int)DBOperations.CREATE_FUNCTION, result, request.ClientSolnid, request.CreatedByUserId);
+
+
             }
             catch (Exception ex)
             {
@@ -401,23 +528,51 @@ namespace ExpressBase.ServiceStack.Services
 
 
 
-
         [CompressResponse]
         [Authenticate]
         public DbClientQueryResponse Post(DbClientInsertRequest request)
         {
             int res = 0;
             string mess = "SUCCESS";
+
             try
             {
-                res = this.EbConnectionFactory.DataDB.InsertTable(request.Query, new System.Data.Common.DbParameter[0]);
+                // Debug log
+                Console.WriteLine("Incoming SQL:");
+                Console.WriteLine(request.Query);
+
+                string q = request.Query?.Trim() ?? "";
+
+                // Must start with INSERT
+                if (!q.StartsWith("INSERT", StringComparison.OrdinalIgnoreCase))
+                    throw new ArgumentException("Invalid or empty INSERT query.");
+
+                // No empty column list
+                if (q.Contains("() VALUES"))
+                    throw new ArgumentException("INSERT statement has no columns defined.");
+
+                // No empty VALUES
+                if (q.Contains("VALUES ()"))
+                    throw new ArgumentException("INSERT statement has no values provided.");
+
+                // No trailing comma before closing parenthesis
+                if (System.Text.RegularExpressions.Regex.IsMatch(q, @",\s*\)"))
+                    throw new ArgumentException("INSERT column list has an extra comma.");
+
+                // Run insert
+                res = this.EbConnectionFactory.DataDB.InsertTable(q, new System.Data.Common.DbParameter[0]);
+
+                // Log query
+                LogQuery(q, (int)DBOperations.INSERT, res, request.ClientSolnid, request.CreatedByUserId);
             }
             catch (Exception e)
             {
                 mess = e.Message;
             }
+
             return new DbClientQueryResponse { Result = res, Type = DBOperations.INSERT, Message = mess };
         }
+
 
         [CompressResponse]
         [Authenticate]
@@ -428,6 +583,8 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 res = this.EbConnectionFactory.DataDB.DeleteTable(request.Query, new System.Data.Common.DbParameter[0]);
+                LogQuery(request.Query, (int)DBOperations.DELETE, res, request.ClientSolnid, request.CreatedByUserId);
+
             }
             catch (Exception e)
             {
@@ -441,6 +598,8 @@ namespace ExpressBase.ServiceStack.Services
         public DbClientQueryResponse Post(DbClientDropRequest request)
         {
             var _dataset = this.EbConnectionFactory.DataDB.DoQueries(request.Query, new System.Data.Common.DbParameter[0]);
+            LogQuery(request.Query, (int)DBOperations.DROP, 0, request.ClientSolnid, request.CreatedByUserId);
+
             return new DbClientQueryResponse { Dataset = _dataset };
         }
 
@@ -449,6 +608,7 @@ namespace ExpressBase.ServiceStack.Services
         public DbClientQueryResponse Post(DbClientTruncateRequest request)
         {
             var _dataset = this.EbConnectionFactory.DataDB.DoQueries(request.Query, new System.Data.Common.DbParameter[0]);
+            LogQuery(request.Query, (int)DBOperations.TRUNCATE, 0, request.ClientSolnid, request.CreatedByUserId);
             return new DbClientQueryResponse { Dataset = _dataset };
         }
 
@@ -461,6 +621,8 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 res = this.EbConnectionFactory.DataDB.UpdateTable(request.Query, new System.Data.Common.DbParameter[0]);
+                LogQuery(request.Query, (int)DBOperations.UPDATE, res, request.ClientSolnid, request.CreatedByUserId);
+
             }
             catch (Exception e)
             {
@@ -479,6 +641,9 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 res = this.EbConnectionFactory.DataDB.AlterTable(request.Query, new System.Data.Common.DbParameter[0]);
+                // Log ALTER operation
+                LogQuery(request.Query, (int)DBOperations.ALTER, res, request.ClientSolnid, request.CreatedByUserId);
+
             }
             catch (Exception e)
             {
@@ -496,6 +661,8 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 res = this.EbConnectionFactory.DataDB.CreateTable(request.Query);
+                LogQuery(request.Query, (int)DBOperations.CREATE, res, request.ClientSolnid, request.CreatedByUserId);
+
             }
             catch (Exception e)
             {
