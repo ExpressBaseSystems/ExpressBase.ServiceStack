@@ -526,6 +526,106 @@ namespace ExpressBase.ServiceStack.Services
             };
         }
 
+        [CompressResponse]
+        [Authenticate]
+        public DbClientLogEditedFunctionResponse Post(DbClientLogEditedFunctionRequest request)
+        {
+            int res = 0;
+            string mess = "Function edit logged successfully";
+
+            try
+            {
+                EbConnectionFactory factory = GetFactory(request.IsAdminOwn, request.ClientSolnid);
+
+                if (string.IsNullOrEmpty(request.FunctionName) || string.IsNullOrEmpty(request.FunctionCode))
+                {
+                    throw new ArgumentException("Function name and function code must be provided.");
+                }
+
+                // Build log text
+                string logText = $"-- Edited Function Log\n-- Function: {request.FunctionName}\n{request.FunctionCode}";
+
+                // Call LogQuery (like in CreateConstraint)
+                LogQuery(logText, (int)DBOperations.ALTER, 0, request.ClientSolnid, request.CreatedByUserId);
+            }
+            catch (Exception ex)
+            {
+                res = -1;
+                mess = "Error: " + ex.Message;
+            }
+
+            return new DbClientLogEditedFunctionResponse
+            {
+                Result = res,
+                Type = DBOperations.ALTER,
+                Message = mess
+            };
+        }
+
+        [CompressResponse]
+        [Authenticate]
+        public List<DbClientFunctionHistoryResponse> Post(DbClientFunctionHistoryRequest request)
+        {
+            List<DbClientFunctionHistoryResponse> logs = new List<DbClientFunctionHistoryResponse>();
+
+            try
+            {
+                EbConnectionFactory factory = GetFactory(request.IsAdminOwn, request.SolutionId);
+
+                string query = @"
+SELECT 
+    l.id,
+    l.query AS function_code,
+    l.solution_id,
+    u.fullname AS created_by_name,
+    l.eb_created_at
+FROM eb_dbclient_logs l
+LEFT JOIN eb_users u ON u.id = l.eb_created_by
+WHERE l.eb_del = 'F' AND l.type = @type
+";
+
+                List<DbParameter> parameters = new List<DbParameter>
+        {
+            factory.DataDB.GetNewParameter("@type", EbDbTypes.Int32, (int)DBOperations.ALTER) // make sure this matches your enum
+        };
+
+                if (!string.IsNullOrEmpty(request.SolutionId))
+                {
+                    query += " AND l.solution_id = @solutionId";
+                    parameters.Add(factory.DataDB.GetNewParameter("@solutionId", EbDbTypes.String, request.SolutionId));
+                }
+
+                if (!string.IsNullOrEmpty(request.FunctionName))
+                {
+                    query += " AND l.query LIKE @functionName";
+                    parameters.Add(factory.DataDB.GetNewParameter("@functionName", EbDbTypes.String, "%" + request.FunctionName + "%"));
+                }
+
+                query += " ORDER BY l.eb_created_at DESC LIMIT 500";
+
+                EbDataTable dbResults = factory.DataDB.DoQuery(query, parameters.ToArray());
+
+                foreach (var row in dbResults.Rows)
+                {
+                    logs.Add(new DbClientFunctionHistoryResponse
+                    {
+                        Id = Convert.ToInt32(row["id"]),
+                        FunctionName = request.FunctionName,
+                        FunctionCode = row["function_code"]?.ToString(),
+                        SolutionId = row["solution_id"]?.ToString(),
+                        CreatedByName = row["created_by_name"]?.ToString(),
+                        CreatedAt = Convert.ToDateTime(row["eb_created_at"]),
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("GetFunctionHistory failed: " + ex.Message);
+            }
+
+            return logs;
+        }
+
 
 
         [CompressResponse]
