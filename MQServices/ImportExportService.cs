@@ -7,20 +7,14 @@ using ExpressBase.Common.ServiceClients;
 using ExpressBase.Objects;
 using ExpressBase.Objects.Services;
 using ExpressBase.Objects.ServiceStack_Artifacts;
-using ExpressBase.Security.Core;
-using ExpressBase.ServiceStack.Services;
-using Newtonsoft.Json;
+using ExpressBase.Security.Core; 
 using ServiceStack;
 using ServiceStack.Messaging;
 using ServiceStack.Redis;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Collections.Specialized; 
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -128,7 +122,7 @@ namespace ExpressBase.ServiceStack.Services
                     AppWrapper Appwrp = Devservice.Get(new GetApplicationRequest { Id = _app.Key }).AppInfo;
                     Appwrp.ObjCollection = new List<EbObject>();
                     foreach (string _refid in _app.Value)
-                        GetRelated(_refid, ObjDictionary, request.SolnId);
+                        GetRelatedObjects(_refid, ObjDictionary, request.SolnId);
 
                     ICollection ObjectList = ObjDictionary.Values;
                     foreach (object item in ObjectList)
@@ -266,7 +260,8 @@ namespace ExpressBase.ServiceStack.Services
                                         UserId = request.UserId,
                                         UserAuthId = request.UserAuthId,
                                         WhichConsole = request.WhichConsole,
-                                        IsImport = true
+                                        IsImport = true,
+                                        HideInMenu = (obj as IEBRootObject).HideInMenu
                                     };
                                     EbObject_Create_New_ObjectResponse res = Objservice.Post(ds);
                                     RefidMap[obj.RefId] = res.RefId;
@@ -299,7 +294,8 @@ namespace ExpressBase.ServiceStack.Services
                                     WhichConsole = request.WhichConsole,
                                     Relations = _rel_obj_tmp,
                                     Tags = "_tags",
-                                    IsImport = true
+                                    IsImport = true,
+                                    HideInMenu = (obj as IEBRootObject).HideInMenu
                                 };
                                 EbObject_SaveResponse saveRes = Objservice.Post(ss);
                             }
@@ -375,8 +371,8 @@ namespace ExpressBase.ServiceStack.Services
             }
             return null;
         }
-
-        public void GetRelated(string _refid, OrderedDictionary ObjDictionary, string solid)
+                
+        public void GetRelatedObjects(string _refid, OrderedDictionary ObjDictionary, string solid)
         {
             EbObject obj = null;
             if (!ObjDictionary.Contains(_refid))
@@ -390,7 +386,7 @@ namespace ExpressBase.ServiceStack.Services
                     List<string> _refCollection = obj.DiscoverRelatedRefids();
                     foreach (string _ref in _refCollection)
                         if (_ref.Trim() != string.Empty)
-                            GetRelated(_ref, ObjDictionary, solid);
+                            GetRelatedObjects(_ref, ObjDictionary, solid);
                 }
             }
         }

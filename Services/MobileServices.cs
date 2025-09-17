@@ -280,7 +280,8 @@ namespace ExpressBase.ServiceStack.Services
 
             MobileAppSettings appSettings = data.CurrentSolution?.SolutionSettings?.MobileAppSettings;
 
-            if (!data.CurrentUser.IsAdmin() && appSettings?.MaintenanceMode == true)
+            if (!data.CurrentUser.IsAdmin() && !data.CurrentUser.Roles.Contains(SystemRoles.SolutionTester.ToString()) &&
+                appSettings?.MaintenanceMode == true)
             {
                 if (string.IsNullOrWhiteSpace(appSettings.MaintenanceMessage))
                     appSettings.MaintenanceMessage = "Servers under maintenance. Please try after sometime.";
@@ -313,7 +314,7 @@ LEFT JOIN
 ON EOS.eb_obj_ver_id = EOV.id
 WHERE
 	COALESCE(EO.eb_del, 'F') = 'F' AND COALESCE(EOS.id, 0) > 0 AND 
-	(EO.obj_type = 13 OR EO.obj_type = 3) AND 
+	(EO.obj_type = 13 OR EO.obj_type = 3 OR EO.obj_type = 31) AND 
 	COALESCE(EOA.eb_del, 'F') = 'F' AND
 	EA.eb_del = 'F' AND EA.application_type = 2 
 	{0}

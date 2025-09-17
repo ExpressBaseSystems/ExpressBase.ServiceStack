@@ -25,6 +25,7 @@ using ExpressBase.CoreBase.Globals;
 using Newtonsoft.Json;
 using ExpressBase.Objects.Helpers;
 using ExpressBase.Common.Helpers;
+using DocumentFormat.OpenXml.Bibliography;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -36,45 +37,52 @@ namespace ExpressBase.ServiceStack.Services
 
         private EbApi Api { set; get; }
 
+        public int LogMasterId { get; set; }
+
+
         public ApiServices(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc) : base(_dbf, _sfc)
         {
             this.StudioServices = base.ResolveService<EbObjectService>();
             this.WebFormService = base.ResolveService<WebFormServices>();
         }
 
-        public Dictionary<string, object> ProcessGlobalDictionary(Dictionary<string, object> data)
+        public InsertLogResponse Post(InsertLogRequest request)
         {
-            Dictionary<string, object> globalParams = new Dictionary<string, object>();
+            this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+            IDatabase dataDB = EbConnectionFactory.DataDB;
 
-            foreach (KeyValuePair<string, object> kp in data)
-            {
-                if (kp.Value == null) continue;
+            string query = @" 
+                        INSERT INTO 
+                            eb_api_logs_master(refid, name, version, type, eb_created_at , params, status, message, eb_created_by, eb_updated_at) 
+                        VALUES
+                            (:refid, :name, :version, :type, NOW(), :params, :status, :message, :eb_created_by, NOW()) 
+                        RETURNING id;";
+            DbParameter[] parameters = new DbParameter[] {
+                            dataDB.GetNewParameter("name", EbDbTypes.String, request.Name) ,
+                            dataDB.GetNewParameter("version", EbDbTypes.String, request.Version  ??"") ,
+                            dataDB.GetNewParameter("refid", EbDbTypes.String, request.RefId ?? "") ,
+                            dataDB.GetNewParameter("type", EbDbTypes.Int32, 1),
+                            dataDB.GetNewParameter("message", EbDbTypes.String, request.Message),
+                            dataDB.GetNewParameter("status", EbDbTypes.String, request.Status),
+                            dataDB.GetNewParameter("params", EbDbTypes.Json, request.Parameters),
+                            //dataDB.GetNewParameter("result", EbDbTypes.Json, request.Result),
+                            dataDB.GetNewParameter("eb_created_by", EbDbTypes.Int32, request.UserId)
+                        };
+            EbDataTable dt = dataDB.DoQuery(query, parameters);
 
-                if (kp.Value is string parsed)
-                {
-                    parsed = parsed.Trim();
-
-                    if ((parsed.StartsWith("{") && parsed.EndsWith("}")) || (parsed.StartsWith("[") && parsed.EndsWith("]")))
-                    {
-                        string formated = parsed.Replace(@"\", string.Empty);
-                        globalParams.Add(kp.Key, JObject.Parse(formated));
-                    }
-                    else
-                        globalParams.Add(kp.Key, kp.Value);
-                }
-                else
-                {
-                    globalParams.Add(kp.Key, kp.Value);
-                }
-            }
-            return globalParams;
+            return new InsertLogResponse { Id = Convert.ToInt32(dt?.Rows[0][0]) };
         }
 
-        [Authenticate]
+        //[Authenticate]
         public ApiResponse Any(ApiRequest request)
         {
             try
             {
+                this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+                this.StudioServices.EbConnectionFactory = this.EbConnectionFactory;
+
+                this.LogMasterId = EbApiHelper.InsertLog(request.Name, request.Version, request.RefId, this.EbConnectionFactory.DataDB, 1);
+
                 if (request.HasRefId())
                 {
                     try
@@ -94,7 +102,7 @@ namespace ExpressBase.ServiceStack.Services
 
                 if (this.Api == null)
                 {
-                    this.Api = new EbApi { ApiResponse = new ApiResponse() };
+                    this.Api = new EbApi { };
                     this.Api.ApiResponse.Message.ErrorCode = ApiErrorCode.ApiNotFound;
                     this.Api.ApiResponse.Message.Status = "Api does not exist";
                     this.Api.ApiResponse.Message.Description = $"Api '{request.Name}' does not exist!,";
@@ -102,7 +110,6 @@ namespace ExpressBase.ServiceStack.Services
                     throw new Exception(this.Api.ApiResponse.Message.Description);
                 }
 
-                this.Api.ApiResponse = new ApiResponse();
                 this.Api.Redis = Redis;
 
                 this.Api.SolutionId = request.SolnId;
@@ -126,6 +133,14 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine("---API SERVICE END POINT EX CATCH---");
                 Console.WriteLine(e.Message + "\n" + e.StackTrace);
             }
+
+            string paramsUsed = (Api.GlobalParams != null) ? JsonConvert.SerializeObject(Api.GlobalParams) : JsonConvert.SerializeObject(request.Data);
+
+
+            EbApiHelper.UpdateLog(this.EbConnectionFactory.DataDB, this.LogMasterId, this.Api.ApiResponse.Message.Description,
+               this.Api.ApiResponse.Message.Status, paramsUsed,
+               JsonConvert.SerializeObject(this.Api.ApiResponse?.Result), request.UserId);
+
             return this.Api.ApiResponse;
         }
 
@@ -154,6 +169,33 @@ namespace ExpressBase.ServiceStack.Services
                 Console.WriteLine(ex.Message);
             }
         }
+        public Dictionary<string, object> ProcessGlobalDictionary(Dictionary<string, object> data)
+        {
+            Dictionary<string, object> globalParams = new Dictionary<string, object>();
+
+            foreach (KeyValuePair<string, object> kp in data)
+            {
+                if (kp.Value == null) continue;
+
+                if (kp.Value is string parsed)
+                {
+                    parsed = parsed.Trim();
+
+                    if ((parsed.StartsWith("{") && parsed.EndsWith("}")) || (parsed.StartsWith("[") && parsed.EndsWith("]")))
+                    {
+                        string formated = parsed.Replace(@"\", string.Empty);
+                        globalParams.Add(kp.Key, JObject.Parse(formated));
+                    }
+                    else
+                        globalParams.Add(kp.Key, kp.Value);
+                }
+                else
+                {
+                    globalParams.Add(kp.Key, kp.Value);
+                }
+            }
+            return globalParams;
+        }
 
         private object GetResult(ApiResources resource)
         {
@@ -164,7 +206,7 @@ namespace ExpressBase.ServiceStack.Services
                 switch (resource)
                 {
                     case EbSqlReader reader:
-                        res.Result = ExecuteDataReader(reader);
+                        res.Result = reader.ExecuteDataReader(this.Api);
                         break;
                     case EbSqlWriter writer:
                         res.Result = ExecuteDataWriter(writer);
@@ -196,6 +238,9 @@ namespace ExpressBase.ServiceStack.Services
                     case EbCSVPusher pusher:
                         res.Result = (pusher as EbCSVPusher).ExecuteCSVPusher(this.Api, this, this.FileClient, false);
                         break;
+                    case EbBatchSqlWriter batchWriter:
+                        res.Result = batchWriter.Execute(this.Api, this);
+                        break;
                     //case EbEncrypt encrypt:
                     //    res.Result = (encrypt as EbEncrypt).ExecuteEncrypt(this.Api);
                     //    break;
@@ -225,33 +270,6 @@ namespace ExpressBase.ServiceStack.Services
 
                 throw new ApiException("[GetResult] ," + ex.Message);
             }
-        }
-
-        private object ExecuteDataReader(EbSqlReader sqlReader)
-        {
-            EbDataSet dataSet;
-            try
-            {
-                EbDataReader dataReader = GetEbObject<EbDataReader>(sqlReader.Reference);
-
-                List<DbParameter> dbParameters = new List<DbParameter>();
-
-                List<Param> InputParams = dataReader.GetParams((RedisClient)this.Redis);
-
-                FillParams(InputParams);
-
-                foreach (Param param in InputParams)
-                {
-                    dbParameters.Add(this.EbConnectionFactory.DataDB.GetNewParameter(param.Name, (EbDbTypes)Convert.ToInt32(param.Type), param.ValueTo));
-                }
-
-                dataSet = this.EbConnectionFactory.DataDB.DoQueries(dataReader.Sql, dbParameters.ToArray());
-            }
-            catch (Exception ex)
-            {
-                throw new ApiException("[ExecuteDataReader], " + ex.Message);
-            }
-            return dataSet;
         }
 
         private object ExecuteDataWriter(EbSqlWriter sqlWriter)
@@ -740,7 +758,7 @@ namespace ExpressBase.ServiceStack.Services
                     .ToDictionary(x => x.prop, x => x.val as object);
 
                 if (request.Component is EbSqlReader reader)
-                    request.Component.Result = this.ExecuteDataReader(reader);
+                    request.Component.Result = (reader as EbSqlReader).ExecuteDataReader(this.Api);
                 else if (request.Component is EbSqlWriter writer)
                     request.Component.Result = this.ExecuteDataWriter(writer);
                 else if (request.Component is EbSqlFunc func)

@@ -161,7 +161,7 @@ namespace ExpressBase.ServiceStack.Services
             try
             {
                 string sql = @"SELECT COUNT(*) FROM eb_solutions WHERE tenant_id = :tid AND pricing_tier = :pricing_tier AND type = 1;
-                              SELECT COUNT(*) FROM eb_solutions WHERE tenant_id = :tid AND pricing_tier = :pricing_tier;";
+                              SELECT COUNT(*) FROM eb_solutions WHERE tenant_id = :tid;";
                 DbParameter[] parameters =
                 {
                 this.InfraConnectionFactory.DataDB.GetNewParameter("tid",EbDbTypes.Int32, request.UserId),
@@ -174,11 +174,13 @@ namespace ExpressBase.ServiceStack.Services
             catch (Exception e)
             {
                 Console.WriteLine("Error at count * of solutions :" + e.Message);
+                resp.ResponseStatus.Message = e.Message;
+                resp.ResponseStatus.StackTrace = e.StackTrace;
             }
 
             try
             {
-                if (_solcount <= 3)
+                if (_solcount < 3)
                 {
                     CreateSolutionResponse response = this.Post(new CreateSolutionRequest
                     {
@@ -198,14 +200,21 @@ namespace ExpressBase.ServiceStack.Services
                         user.Permissions.Add(response.SolURL + "-" + (int)SystemRoles.SolutionOwner);
                         this.Redis.Set<IUserAuth>(request.UserAuthId, user);
                     }
+                    resp.ResponseStatus.Message = response.ResponseStatus.Message;
+                    resp.ResponseStatus.StackTrace = response.ResponseStatus.StackTrace;
                 }
                 else
+                {
                     resp.Status = false;
+                    resp.ResponseStatus.Message = $"Free solution count reached {_solcount}";
+                }
             }
             catch (Exception e)
             {
                 Console.WriteLine("Exception at new solution creation furtherRequest :" + e.Message);
                 resp.Status = false;
+                resp.ResponseStatus.Message = e.Message;
+                resp.ResponseStatus.StackTrace = e.StackTrace;
             }
             return resp;
         }
@@ -563,12 +572,23 @@ namespace ExpressBase.ServiceStack.Services
                                 });
                             }
                         }
+                        else
+                        {
+                            resp.ResponseStatus.Message = response.ResponseStatus.Message;
+                            resp.ResponseStatus.StackTrace = response.ResponseStatus.StackTrace;
+                        }
                     }
+                }
+                else
+                {
+                    resp.ResponseStatus.Message = "Invalid soution id " + resp.Id;
                 }
             }
             catch (Exception e)
             {
                 Console.WriteLine("Exception: " + e.Message + e.StackTrace);
+                resp.ResponseStatus.Message = e.Message;
+                resp.ResponseStatus.StackTrace = e.StackTrace;
             }
             return resp;
         }

@@ -49,7 +49,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 UserAuthId = request.UserAuthId,
                 MediaUrl = request.MediaUrl,
                 RefId = request.RefId
-            });
+    });
         }
 
         public GetFilledSmsTemplateResponse Get(GetFilledSmsTemplateRequest request)
@@ -160,7 +160,8 @@ namespace ExpressBase.ServiceStack.MQServices
                                 WhichConsole = request.WhichConsole,
                                 UserAuthId = request.UserAuthId,
                                 RefId = request.RefId,
-                                Params = request.Params
+                                Params = request.Params,
+                                Sender= FilledSmsTemplate.SmsTemplate.Sender
                             });
                             //return true;
                         }

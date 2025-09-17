@@ -7,6 +7,7 @@ using ExpressBase.CoreBase.Globals;
 using ExpressBase.Objects;
 using ExpressBase.Objects.Services;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ServiceStack;
 using ServiceStack.Messaging;
@@ -18,7 +19,9 @@ namespace ExpressBase.ServiceStack.MQServices
     {
         private EbApi Api { set; get; }
 
-        public ApiInternalService( IMessageProducer _mqp) : base( _mqp)
+        public int LogMasterId { get; set; }
+
+        public ApiInternalService(IMessageProducer _mqp) : base(_mqp)
         {
 
         }
@@ -57,7 +60,12 @@ namespace ExpressBase.ServiceStack.MQServices
         {
             try
             {
+                this.EbConnectionFactory = new EbConnectionFactory(request?.JobArgs?.SolnId, Redis);
+
+                this.LogMasterId = EbApiHelper.InsertLog(request.Name, request.Version, request.RefId ?? request.JobArgs?.ObjId.ToString() ?? request.JobArgs?.RefId, this.EbConnectionFactory.DataDB, 2);
+
                 GetApiObject(request);
+
                 InitializeExecution();
             }
             catch (Exception e)
@@ -65,6 +73,14 @@ namespace ExpressBase.ServiceStack.MQServices
                 Console.WriteLine("---API SERVICE END POINT EX CATCH---");
                 Console.WriteLine(e.Message + "\n" + e.StackTrace);
             }
+
+            string paramsUsed = (Api.GlobalParams != null) ? JsonConvert.SerializeObject(Api.GlobalParams) : JsonConvert.SerializeObject(request?.JobArgs?.Params);
+            int uId = request.JobArgs.UserId > 0 ? request.JobArgs.UserId : request.UserId;
+
+            EbApiHelper.UpdateLog(this.EbConnectionFactory.DataDB, this.LogMasterId, this.Api.ApiResponse.Message.Description,
+                this.Api.ApiResponse.Message.Status, paramsUsed,
+                JsonConvert.SerializeObject(this.Api.ApiResponse?.Result), uId);
+
             return this.Api.ApiResponse;
         }
 
@@ -86,6 +102,7 @@ namespace ExpressBase.ServiceStack.MQServices
                 {
                     this.Api = new EbApi();
                     this.EbConnectionFactory = new EbConnectionFactory(SolutionId, Redis);
+
                     this.Api = Api.GetApi(request.JobArgs.RefId, request.JobArgs.ObjId, this.Redis, this.EbConnectionFactory.DataDB, this.EbConnectionFactory.ObjectsDB);
 
                 }
@@ -111,7 +128,6 @@ namespace ExpressBase.ServiceStack.MQServices
                         Api.Redis = this.Redis;
                         Api.ObjectsDB = this.EbConnectionFactory.ObjectsDB;
                         Api.DataDB = this.EbConnectionFactory.DataDB;
-                        this.Api.ApiResponse = new ApiResponse();
                     }
                 }
                 catch (Exception ex)
@@ -123,7 +139,7 @@ namespace ExpressBase.ServiceStack.MQServices
 
             if (this.Api is null)
             {
-                this.Api = new EbApi { ApiResponse = new ApiResponse() };
+                this.Api = new EbApi { };
                 this.Api.ApiResponse.Message.ErrorCode = ApiErrorCode.ApiNotFound;
                 this.Api.ApiResponse.Message.Status = "Api does not exist";
                 this.Api.ApiResponse.Message.Description = $"Api does not exist!,";

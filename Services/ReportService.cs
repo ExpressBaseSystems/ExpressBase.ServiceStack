@@ -40,7 +40,7 @@ namespace ExpressBase.ServiceStack
 
         public PdfWriter Writer = null;
 
-        public Document Document = null;
+        public Document MainDocument = null;
 
         public PdfContentByte Canvas = null;
 
@@ -64,7 +64,7 @@ namespace ExpressBase.ServiceStack
                         Report.Solution = GetSolutionObject(request.SolnId);
                         Report.ReadingUser = GetUserObject(request.ReadingUserAuthId);
                         Report.RenderingUser = GetUserObject(request.RenderingUserAuthId);
-                        Report.ExecuteRendering(request.BToken, request.RToken, this.Document, this.Ms1, request.Params, this.EbConnectionFactory, request.UseRwDb);
+                        Report.ExecuteRendering(request.BToken, request.RToken, this.Ms1, request.Params, this.EbConnectionFactory, request.UseRwDb, this.MainDocument);
 
                     }
                     catch (Exception e)
@@ -72,21 +72,12 @@ namespace ExpressBase.ServiceStack
                         Console.WriteLine("Exception-reportService " + e.Message + e.StackTrace);
                         Report.HandleExceptionPdf(e);
                     }
-
                     Report.Doc.AddTitle(Report.DocumentName);
-
                     Report.Doc.Close();
-
+                    Report.Writer.Close();
                     Report.SetPassword(Ms1);
 
                     string name = Report.DocumentName;
-
-                    if (Report.DataSourceRefId != string.Empty && Report.DataSet != null)
-                    {
-                        Report.DataSet.Tables.Clear();
-                        Report.DataSet = null;
-                    }
-
                     this.Ms1.Position = 0;//important
 
                     return new ReportRenderResponse
@@ -131,48 +122,54 @@ namespace ExpressBase.ServiceStack
             {
                 this.Ms1 = new MemoryStream();
 
-                EbReport ReportObject = EbFormHelper.GetEbObject<EbReport>(request.Refid, null, this.Redis, this);
+                EbReport reportObject = EbFormHelper.GetEbObject<EbReport>(request.Refid, null, this.Redis, this);
 
-                ReportObject.pooledRedisManager = this.PooledRedisManager;
-                ReportObject.ObjectsDB = this.EbConnectionFactory.ObjectsDB;
-                ReportObject.Redis = this.Redis;
-                ReportObject.FileClient = this.FileClient;
-                ReportObject.Solution = GetSolutionObject(request.SolnId);
-                ReportObject.ReadingUser = GetUserObject(request.RenderingUserAuthId);
-                ReportObject.RenderingUser = ReportObject.ReadingUser;
+                reportObject.pooledRedisManager = this.PooledRedisManager;
+                reportObject.ObjectsDB = this.EbConnectionFactory.ObjectsDB;
+                reportObject.Redis = this.Redis;
+                reportObject.FileClient = this.FileClient;
+                reportObject.Solution = GetSolutionObject(request.SolnId);
+                reportObject.ReadingUser = GetUserObject(request.RenderingUserAuthId);
+                reportObject.RenderingUser = reportObject.ReadingUser;
 
-                ReportObject.CultureInfo = CultureHelper.GetSerializedCultureInfo(ReportObject.ReadingUser?.Preference.Locale ?? "en-US").GetCultureInfo();
-                ReportObject.GetWatermarkImages();
+                reportObject.CultureInfo = CultureHelper.GetSerializedCultureInfo(reportObject.ReadingUser?.Preference.Locale ?? "en-US").GetCultureInfo();
+                reportObject.GetWatermarkImages();
 
                 try
                 {
-                    List<Param> _paramlist = request.Params;
-                    if (_paramlist != null)
+                    if (request.Params != null)
                     {
-                        for (int i = 0; i < _paramlist.Count; i++)
+                        for (int i = 0; i < request.Params.Count; i++)
                         {
-                            string[] values = _paramlist[i].Value.Split(',');
+                            string[] values = request.Params[i].Value.Split(',');
+                            reportObject.CurrentReportPageNumber = 1;
 
                             for (int j = 0; j < values.Length; j++)
                             {
-                                List<Param> _newParamlist = new List<Param>
-                            {
-                                new Param { Name = "id", Value = values[j], Type = "7" }
-                            };
+                                List<Param> _newParamlist = new List<Param> { new Param { Name = "id", Value = values[j], Type = "7" } };
 
-                                this.Report = ReportObject;
+                                this.Report = reportObject;
 
-                                if (Report != null)
+                                if (Report == null) continue;
+
+                                Report.Reset();
+
+                                Report.GetData4Pdf(_newParamlist, EbConnectionFactory);
+
+                                if (j > 0)
                                 {
-                                    InitializePdfObjects();
-                                    Report.Doc.NewPage();
-                                    Report.GetData4Pdf(_newParamlist, EbConnectionFactory);
-
-                                    if (Report.DataSet != null)
-                                        Report.Draw();
-                                    else
-                                        throw new Exception();
+                                    reportObject.NextReport = true;
+                                    Report.AddNewPage();
                                 }
+                                InitializePdfObjects();
+
+                                if (!MainDocument.IsOpen())
+                                    MainDocument.Open();
+
+                                if (Report.DataSet != null)
+                                    Report.Draw();
+                                else
+                                    throw new Exception();
                             }
                         }
                     }
@@ -183,18 +180,14 @@ namespace ExpressBase.ServiceStack
                     Report.HandleExceptionPdf(e);
                 }
 
+                Report.IsRenderingComplete = true;
                 Report.Doc.AddTitle(Report.DocumentName);
                 Report.Doc.Close();
-
-                if (Report.DataSourceRefId != string.Empty && Report.DataSet != null)
-                {
-                    Report.DataSet.Tables.Clear();
-                    Report.DataSet = null;
-                }
+                Report.Writer.Close();
 
                 Ms1.Position = 0;
 
-                string Displayname = Regex.Replace(ReportObject.DisplayName, @"\s+", "");
+                string Displayname = Regex.Replace(reportObject.DisplayName, @"\s+", "");
 
                 byte[] compressedData = Compress(Ms1.ToArray());
                 (int, string) id = new DownloadsPageHelper().InsertDownloadFileEntry(this.EbConnectionFactory.DataDB, Displayname + ".pdf", request.UserId, compressedData, true);
@@ -209,32 +202,32 @@ namespace ExpressBase.ServiceStack
 
         public void InitializePdfObjects()
         {
-            float _width = Report.WidthPt - Report.Margin.Left;// - Report.Margin.Right;
-            float _height = Report.HeightPt - Report.Margin.Top - Report.Margin.Bottom;
-            Report.HeightPt = _height;
-
-            Rectangle rec = new Rectangle(_width, _height);
-            if (this.Document == null)
+            if (this.MainDocument == null)
             {
+                float _width = Report.WidthPt - Report.Margin.Left;
+                float _height = Report.HeightPt - Report.Margin.Top - Report.Margin.Bottom;
+                Report.HeightPt = _height;
+
+                Rectangle rec = new Rectangle(_width, _height);
                 Report.Doc = new Document(rec);
                 Report.Doc.SetMargins(Report.Margin.Left, Report.Margin.Right, Report.Margin.Top, Report.Margin.Bottom);
                 Report.Writer = PdfWriter.GetInstance(Report.Doc, this.Ms1);
-                Report.Writer.Open();
-                Report.Doc.Open();
                 Report.Writer.PageEvent = new HeaderFooter(Report);
+                Report.Writer.Open();
                 Report.Writer.CloseStream = true;//important
                 Report.Canvas = Report.Writer.DirectContent;
-                Report.PageNumber = Report.Writer.PageNumber;
-                this.Document = Report.Doc;
+                Report.MasterPageNumber = Report.Writer.PageNumber;
+                this.MainDocument = Report.Doc;
                 this.Writer = Report.Writer;
                 this.Canvas = Report.Canvas;
             }
             else
             {
-                Report.Doc = this.Document;
+                Report.Doc = this.MainDocument;
                 Report.Writer = this.Writer;
                 Report.Canvas = this.Canvas;
-                Report.PageNumber = 1/*Report.Writer.PageNumber*/;
+                Report.SerialNumber = 0;
+                Report.DrawDetailCompleted = false;
             }
         }
 

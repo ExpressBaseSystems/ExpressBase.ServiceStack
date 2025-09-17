@@ -1334,7 +1334,8 @@ namespace ExpressBase.ServiceStack.Services
                     status = 0;
                 }
                 return new RunSqlFunctionResponse() { Status = status };
-            };
+            }
+            ;
         }
 
         public EbObjectChangeStatusResponse Post(EbObjectChangeStatusRequest request)
@@ -1531,6 +1532,8 @@ namespace ExpressBase.ServiceStack.Services
                 return EbObjectTypes.MaterializedView.IntCode;
             else if (obj is EbPosForm)
                 return EbObjectTypes.PosForm.IntCode;
+            else if (obj is EbPrintLayout)
+                return EbObjectTypes.PrintLayout.IntCode;
             else
                 return -1;
         }
