@@ -1,59 +1,62 @@
-﻿using ExpressBase.Common;
+﻿using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Drawing;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Spreadsheet;
+using ExpressBase.Common;
 using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.EbServiceStack.ReqNRes;
+using ExpressBase.Common.Extensions;
+using ExpressBase.Common.Helpers;
+using ExpressBase.Common.LocationNSolution;
 using ExpressBase.Common.Objects;
+using ExpressBase.Common.ServiceClients;
+using ExpressBase.Common.Singletons;
 using ExpressBase.Common.Structures;
+using ExpressBase.Common.WebApi.RequestNResponse;
+using ExpressBase.CoreBase.Globals;
 using ExpressBase.Data;
 using ExpressBase.Objects;
+using ExpressBase.Objects.Helpers;
 using ExpressBase.Objects.Objects;
 using ExpressBase.Objects.Objects.DVRelated;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using ExpressBase.Objects.WebFormRelated;
 using ExpressBase.Security;
+using ExpressBase.ServiceStack.MQServices;
+using ExpressBase.ServiceStack.Services;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
+using Microsoft.Extensions.Hosting;
+using Newtonsoft.Json;
+using OfficeOpenXml;
 using ServiceStack;
 using ServiceStack.Logging;
 using ServiceStack.Redis;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.Dynamic;
 using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using OfficeOpenXml;
-using System.IO;
-using Newtonsoft.Json;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Hosting;
 using System.Threading.Tasks;
-using ExpressBase.Common.Extensions;
-using ExpressBase.Common.Singletons;
-using ExpressBase.Common.Helpers;
-using ExpressBase.Common.LocationNSolution;
-using System.Dynamic;
-using ExpressBase.ServiceStack.Services;
-using ExpressBase.Common.EbServiceStack.ReqNRes;
-using System.Drawing;
-using ExpressBase.Common.ServiceClients;
-using ExpressBase.Objects.Helpers;
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Drawing;
-using DocumentFormat.OpenXml.Spreadsheet;
 using A = DocumentFormat.OpenXml.Drawing;
-using Xdr = DocumentFormat.OpenXml.Drawing.Spreadsheet;
 using A14 = DocumentFormat.OpenXml.Office2010.Drawing;
-using System.Drawing.Imaging;
+using Color = DocumentFormat.OpenXml.Spreadsheet.Color;
+using Fill = DocumentFormat.OpenXml.Spreadsheet.Fill;
 using Font = DocumentFormat.OpenXml.Spreadsheet.Font;
 using Fonts = DocumentFormat.OpenXml.Spreadsheet.Fonts;
-using Fill = DocumentFormat.OpenXml.Spreadsheet.Fill;
-using Color = DocumentFormat.OpenXml.Spreadsheet.Color;
-using ExpressBase.Objects.WebFormRelated;
-using ExpressBase.CoreBase.Globals;
-using ExpressBase.ServiceStack.MQServices;
+using ImageQuality = ExpressBase.Common.ImageQuality;
+using ResponseStatus = ServiceStack.ResponseStatus;
+using Xdr = DocumentFormat.OpenXml.Drawing.Spreadsheet;
 
 namespace ExpressBase.ServiceStack
 {
@@ -1592,7 +1595,7 @@ namespace ExpressBase.ServiceStack
                                 workRow.CustomHeight = true;
                                 if (imgid > 0)
                                 {
-                                    Stream imageStream = GetImageStream(imgid);
+                                    Stream imageStream = GetImageStream(imgid, _user);
                                     if (imageStream != null)
                                         InsertImage(worksheetPart1, rowIndex - 1, ExcelColIndex - 1, imageStream);
                                 }
@@ -2603,7 +2606,7 @@ namespace ExpressBase.ServiceStack
                                     {
                                         Log.Info("dprefid----" + imgid);
                                         //byte[] bytea = GetImage(imgid);
-                                        Stream imageStream = GetImageStream(imgid);
+                                        Stream imageStream = GetImageStream(imgid, _user);
                                         if (imageStream != null)
                                             InsertImage(worksheetPart1, rowIndex - 1, ExcelColIndex - 1, imageStream);
                                         //if (bytea.Length > 0)
@@ -2907,7 +2910,7 @@ namespace ExpressBase.ServiceStack
                                     workRow.CustomHeight = true;
                                     if (imgid > 0)
                                     {
-                                        Stream imageStream = GetImageStream(imgid);
+                                        Stream imageStream = GetImageStream(imgid, _user);
                                         if (imageStream != null)
                                             InsertImage(worksheetPart1, rowIndex - 1, ExcelColIndex - 1, imageStream);
                                     }
@@ -3113,12 +3116,23 @@ namespace ExpressBase.ServiceStack
             return nextId;
         }
 
-        private byte[] GetImage(int refId)
+        private byte[] GetImage(int refId, User currentUser)
         {
-            DownloadFileResponse dfs;
-
             byte[] fileByte = new byte[0];
-            dfs = FileClient.Get
+
+            if (this._ebSolution.SolutionSettings.EnableNewFileServer)
+            {
+                DownloadFileResponse2 response = this.FileClient2.DownloadFile(new ImageMeta
+                {
+                    FileRefId = refId,
+                    FileCategory = Common.Enums.EbFileCategory.Images
+                }, "/download/image", this._ebSolution.SolutionID, currentUser.UserId, currentUser.AuthId, ImageQuality.original, true);
+
+                fileByte = response?.FileBytes;
+            }
+            else
+            {
+                DownloadFileResponse dfs = FileClient.Get
                  (new DownloadImageByIdRequest
                  {
                      ImageInfo = new ImageMeta
@@ -3127,19 +3141,30 @@ namespace ExpressBase.ServiceStack
                          FileCategory = Common.Enums.EbFileCategory.Images
                      }
                  });
-            if (dfs.StreamWrapper != null)
-            {
-                dfs.StreamWrapper.Memorystream.Position = 0;
-                fileByte = dfs.StreamWrapper.Memorystream.ToBytes();
+                if (dfs.StreamWrapper != null)
+                {
+                    dfs.StreamWrapper.Memorystream.Position = 0;
+                    fileByte = dfs.StreamWrapper.Memorystream.ToBytes();
+                }
             }
-
             return fileByte;
         }
 
-        private Stream GetImageStream(int refId)
+        private Stream GetImageStream(int refId, User currentUser)
         {
-            DownloadFileResponse dfs;
-            dfs = FileClient.Get
+            if (this._ebSolution.SolutionSettings.EnableNewFileServer)
+            {
+                DownloadFileResponse2 response = this.FileClient2.DownloadFile(new ImageMeta
+                {
+                    FileRefId = refId,
+                    FileCategory = Common.Enums.EbFileCategory.Images
+                }, "/download/image", this._ebSolution.SolutionID, currentUser.UserId, currentUser.AuthId, ImageQuality.original, true);
+
+                return new MemoryStream(response?.FileBytes);
+            }
+            else
+            {
+                DownloadFileResponse dfs = FileClient.Get
                  (new DownloadImageByIdRequest
                  {
                      ImageInfo = new ImageMeta
@@ -3148,12 +3173,12 @@ namespace ExpressBase.ServiceStack
                          FileCategory = Common.Enums.EbFileCategory.Images
                      }
                  });
-            if (dfs.StreamWrapper != null)
-            {
-                dfs.StreamWrapper.Memorystream.Position = 0;
-                return dfs.StreamWrapper.Memorystream;
+                if (dfs.StreamWrapper != null)
+                {
+                    dfs.StreamWrapper.Memorystream.Position = 0;
+                    return dfs.StreamWrapper.Memorystream;
+                }
             }
-
             return null;
         }
 

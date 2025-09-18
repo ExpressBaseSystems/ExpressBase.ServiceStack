@@ -1,25 +1,28 @@
-﻿using ExpressBase.Common;
+﻿using DocumentFormat.OpenXml.Vml;
+using ExpressBase.Common;
+using ExpressBase.Common.Application;
 using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.EbServiceStack.ReqNRes;
+using ExpressBase.Common.Extensions;
+using ExpressBase.Common.LocationNSolution;
 using ExpressBase.Common.Objects;
+using ExpressBase.Common.ServiceClients;
 using ExpressBase.Common.Structures;
+using ExpressBase.Common.WebApi.RequestNResponse;
 using ExpressBase.Objects;
+using ExpressBase.Objects.Helpers;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using ExpressBase.Objects.WebFormRelated;
+using ExpressBase.Security;
+using Newtonsoft.Json;
+using ServiceStack;
 using ServiceStack.Messaging;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using ExpressBase.Security;
-using ExpressBase.Common.Extensions;
 using System.Data.Common;
-using ExpressBase.Common.Application;
-using Newtonsoft.Json;
-using ServiceStack;
-using ExpressBase.Objects.Helpers;
-using ExpressBase.Common.LocationNSolution;
-using ExpressBase.Common.ServiceClients;
-using ExpressBase.Common.EbServiceStack.ReqNRes;
-using ExpressBase.Objects.WebFormRelated;
+using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace ExpressBase.ServiceStack.Services
@@ -28,6 +31,9 @@ namespace ExpressBase.ServiceStack.Services
     public class MobileServices : EbBaseService
     {
         const string EBPARAM_LOCID = "eb_loc_id";
+
+        private Eb_Solution CurrentSolution = null;
+        private User CurrentUser = null;
 
         public MobileServices(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc, IMessageProducer _mqp) : base(_dbf, _sfc, _mqp) { }
 
@@ -270,8 +276,8 @@ namespace ExpressBase.ServiceStack.Services
         public EbMobileSolutionData Post(MobileSolutionDataRequestV2 request)
         {
             EbMobileSolutionData data = new EbMobileSolutionData();
-            data.CurrentUser = this.GetUserObject(request.UserAuthId);
-            data.CurrentSolution = this.GetSolutionObject(request.SolnId);
+            this.CurrentUser = data.CurrentUser = this.GetUserObject(request.UserAuthId);
+            this.CurrentSolution = data.CurrentSolution = this.GetSolutionObject(request.SolnId);
 
             Dictionary<string, object> metaData = JsonConvert.DeserializeObject<Dictionary<string, object>>(request.MetaData);
             DateTime date = metaData.ContainsKey("last_sync_ts") ? Convert.ToDateTime(metaData["last_sync_ts"]) : DateTime.MinValue;
@@ -467,24 +473,35 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
 
         public byte[] GetImage(int refId)
         {
-            DownloadFileResponse dfs = null;
-
             byte[] fileByte = new byte[0];
-            dfs = FileClient.Get
-                 (new DownloadImageByIdRequest
-                 {
-                     ImageInfo = new ImageMeta
-                     {
-                         FileRefId = refId,
-                         FileCategory = Common.Enums.EbFileCategory.Images
-                     }
-                 });
-            if (dfs.StreamWrapper != null)
-            {
-                dfs.StreamWrapper.Memorystream.Position = 0;
-                fileByte = dfs.StreamWrapper.Memorystream.ToBytes();
-            }
 
+            if (this.CurrentSolution.SolutionSettings.EnableNewFileServer)
+            {
+                DownloadFileResponse2 response = this.FileClient2.DownloadFile(new ImageMeta
+                {
+                    FileRefId = refId,
+                    FileCategory = Common.Enums.EbFileCategory.Images
+                }, "/download/image", this.CurrentSolution.SolutionID, this.CurrentUser.UserId, this.CurrentUser.AuthId, ImageQuality.original, true);
+
+                fileByte = response?.FileBytes;
+            }
+            else
+            {
+                DownloadFileResponse dfs = FileClient.Get
+                     (new DownloadImageByIdRequest
+                     {
+                         ImageInfo = new ImageMeta
+                         {
+                             FileRefId = refId,
+                             FileCategory = Common.Enums.EbFileCategory.Images
+                         }
+                     });
+                if (dfs.StreamWrapper != null)
+                {
+                    dfs.StreamWrapper.Memorystream.Position = 0;
+                    fileByte = dfs.StreamWrapper.Memorystream.ToBytes();
+                }
+            }
             return fileByte;
         }
 

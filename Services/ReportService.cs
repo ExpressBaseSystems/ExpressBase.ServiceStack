@@ -32,7 +32,7 @@ namespace ExpressBase.ServiceStack
     public class ReportService : EbBaseService
     {
         //private iTextSharp.text.Font f = FontFactory.GetFont(FontFactory.HELVETICA, 12);
-        public ReportService(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc, IMessageProducer _mqp, IMessageQueueClient _mqc, PooledRedisClientManager pooledRedisManager) : base(_dbf, _sfc, _mqp, _mqc, pooledRedisManager) { }
+        public ReportService(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc, IMessageProducer _mqp, IMessageQueueClient _mqc, PooledRedisClientManager pooledRedisManager, EbStaticFileClient2 _sfc2) : base(_dbf, _sfc, _mqp, _mqc, pooledRedisManager, _sfc2) { }
 
         public MemoryStream Ms1 = null;
 
@@ -61,6 +61,7 @@ namespace ExpressBase.ServiceStack
                         Report.Redis = this.Redis;
                         Report.pooledRedisManager = this.PooledRedisManager;
                         Report.FileClient = this.FileClient;
+                        Report.FileClient2 = this.FileClient2;
                         Report.Solution = GetSolutionObject(request.SolnId);
                         Report.ReadingUser = GetUserObject(request.ReadingUserAuthId);
                         Report.RenderingUser = GetUserObject(request.RenderingUserAuthId);
@@ -128,6 +129,7 @@ namespace ExpressBase.ServiceStack
                 reportObject.ObjectsDB = this.EbConnectionFactory.ObjectsDB;
                 reportObject.Redis = this.Redis;
                 reportObject.FileClient = this.FileClient;
+                reportObject.FileClient2 = this.FileClient2;
                 reportObject.Solution = GetSolutionObject(request.SolnId);
                 reportObject.ReadingUser = GetUserObject(request.RenderingUserAuthId);
                 reportObject.RenderingUser = reportObject.ReadingUser;

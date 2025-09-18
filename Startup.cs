@@ -249,6 +249,7 @@ namespace ExpressBase.ServiceStack
             container.Register<IEbServerEventClient>(c => new EbServerEventClient()).ReusedWithin(ReuseScope.Request);
             container.Register<IEbMqClient>(c => new EbMqClient()).ReusedWithin(ReuseScope.Request);
             container.Register<IEbStaticFileClient>(c => new EbStaticFileClient()).ReusedWithin(ReuseScope.Request);
+            container.Register<EbStaticFileClient2>(c => new EbStaticFileClient2(new HttpClient()));
 
 
             //Plugins.Add(new RedisServiceDiscoveryFeature());
