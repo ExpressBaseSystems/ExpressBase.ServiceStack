@@ -32,6 +32,8 @@ using DocumentFormat.OpenXml.Spreadsheet;
 using ServiceStack.Text;
 using System.Text;
 using ServiceStack.Redis;
+using ExpressBase.Objects.ServiceStack_Artifacts.EbButtonPublicFormAttachServiceStackArtifacts;
+using ExpressBase.Common.Helpers;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -3137,6 +3139,201 @@ WHERE
                 resp.errorMessage = ex.Message;
             }
             return resp;
+        }
+
+
+        public ResponseEbButtonPublicFormAttachServiceStackArtifact Get(RequestEbButtonPublicFormAttachServiceStackArtifact request)
+        {
+            DebugHelper.PrintObject(request);
+            DebugHelper.PrintObject(request.PublicFormRefId);
+
+            if (request == null)
+            {
+                return new ResponseEbButtonPublicFormAttachServiceStackArtifact
+                {
+                    Success = false,
+                    Message = "Invalid request payload.",
+                    Error = new ErrorEbButtonPublicFormAttachServiceStackArtifact
+                    {
+                        ErrorCode = "InvalidRequest",
+                        ErrorMessage = "Request payload is null."
+                    }
+                };
+            }
+
+
+            if (string.IsNullOrWhiteSpace(request.PublicFormRefId))
+            {
+                return new ResponseEbButtonPublicFormAttachServiceStackArtifact
+                {
+                    Success = false,
+                    Message = "PublicFormRefId is required.",
+                    Error = new ErrorEbButtonPublicFormAttachServiceStackArtifact
+                    {
+                        ErrorCode = "MissingFormRefId",
+                        ErrorMessage = "The 'PublicFormRefId' query parameter or path value is required."
+                    }
+                };
+            }
+
+            if (string.IsNullOrWhiteSpace(request.SourceFormRefId))
+            {
+                return new ResponseEbButtonPublicFormAttachServiceStackArtifact
+                {
+                    Success = false,
+                    Message = "SourceFormRefId is required.",
+                    Error = new ErrorEbButtonPublicFormAttachServiceStackArtifact
+                    {
+                        ErrorCode = "MissingFormRefId",
+                        ErrorMessage = "The 'SourceFormRefId' query parameter or path value is required."
+                    }
+                };
+            }
+
+
+            if (request.SourceFormDataId < 0)
+            {
+                return new ResponseEbButtonPublicFormAttachServiceStackArtifact
+                {
+                    Success = false,
+                    Message = "SourceFormDataId is required.",
+                    Error = new ErrorEbButtonPublicFormAttachServiceStackArtifact
+                    {
+                        ErrorCode = "MissingFormRefId",
+                        ErrorMessage = "The 'SourceFormDataId' query parameter or path value is required."
+                    }
+                };
+            }
+
+
+            string publicFormId = null;
+            int expireInDays = 0;
+            int expireInHours = 0;
+            int expireInMinutes = 0;
+            bool found = false;
+            List<EbButtonPublicFromAttachFieldMaps> fieldMaps = null;
+            string sourceFormPrimaryTableName;
+
+            try
+            {
+
+                EbWebForm form = this.GetWebFormObject(request.SourceFormRefId, request.UserAuthId, request.SolnId);
+
+                //DebugHelper.PrintObject(form.FormSchema.Tables);
+
+                foreach (var table in form.FormSchema.Tables)
+                {
+                    foreach (var column in table.Columns)
+                    {
+                        if (column.Control != null && column.Control is EbButtonPublicFormAttach control)
+                        {
+                            //throwing an exception as there is a mismatch in PublicFormRefId reveived from frontend
+
+                            if (request.PublicFormRefId != control.PublicFormId)
+                            {
+                                throw new ArgumentException($"PublicFormRefId ({request.PublicFormRefId}) does not match PublicFormId ({control.PublicFormId}).");
+                            }
+
+                            publicFormId = control.PublicFormId;
+                            expireInDays = control.ExpireInDays;
+                            expireInHours = control.ExpireInHours;
+                            expireInMinutes = control.ExpireInMinutes;
+                            fieldMaps = control.FieldMaps;
+
+                            found = true;
+                            break;
+
+                        }
+                    }
+
+                    if (found)
+                    {
+                        break;
+                    }
+                }
+
+                form.TableRowId = request.SourceFormDataId;
+                form.RefreshFormData(EbConnectionFactory.DataDBRO, this);
+                sourceFormPrimaryTableName = form.TableName;
+                var _sourceFormPrimaryTableData = form.FormData.MultipleTables[sourceFormPrimaryTableName];
+                List<SingleColumn> sourceFormPrimaryTableData = null;
+                var queryParts = new List<string>();
+                object sourceFormPrimaryTableDataValue = null;
+                DateTime futureDateTime;
+                long? futureEpoch = null;
+                string queryString = "";
+                string queryStringEncrypted = "";
+
+
+                foreach (var sourceFormPrimaryTableDataum in _sourceFormPrimaryTableData)
+                {
+                    if(sourceFormPrimaryTableDataum.RowId == request.SourceFormDataId)
+                    {
+                        sourceFormPrimaryTableData = sourceFormPrimaryTableDataum.Columns;
+                        break;
+                    }
+                }
+
+                foreach (var fieldMap in fieldMaps)
+                {
+                    sourceFormPrimaryTableDataValue = sourceFormPrimaryTableData.FirstOrDefault(c => c.Name == fieldMap.SourceFormContolName)?.Value;
+
+                    if(sourceFormPrimaryTableDataValue != null)
+                    {
+                            queryParts.Add(
+                                fieldMap.DesitnationFormContolName +
+                                "=" +
+                               sourceFormPrimaryTableDataValue.ToString()
+                            );
+                    }
+                    
+                }
+
+                if (expireInDays != 0 || expireInHours != 0 || expireInMinutes != 0)
+                {
+                    futureDateTime = DateTime.Now
+                        .AddDays(expireInDays)
+                        .AddHours(expireInHours)
+                        .AddMinutes(expireInMinutes);
+
+                    futureEpoch = new DateTimeOffset(futureDateTime).ToUnixTimeSeconds();
+
+                    queryParts.Add("_ebPublicFormExpiryDateTime=" + futureEpoch);
+                }
+
+                if (queryParts.Any())
+                {
+                    queryString = string.Join("&", queryParts);
+                    //var key = AesEncryptionHelper.GenerateKey();
+                    var key = "J4AlupPY4+sT9kVVNcyRcffoCs+Z3fGDUPaVXLZop1g="; // TODO: dummy key for testing; change before release
+                    DebugHelper.PrintObject(key, printAsJson: true);
+                    queryStringEncrypted = AesEncryptionHelper.EncryptString(key, queryString);
+                }
+
+
+                return new ResponseEbButtonPublicFormAttachServiceStackArtifact
+                {
+                    Success = true,
+                    QueryString = queryString,
+                    QueryStringEncrypted = queryStringEncrypted,
+                    Message = "URL generated successfully."
+                };
+            }
+            catch (Exception ex)
+            {
+                DebugHelper.PrintException(ex);
+
+                return new ResponseEbButtonPublicFormAttachServiceStackArtifact
+                {
+                    Success = false,
+                    Message = ex.Message,
+                    Error = new ErrorEbButtonPublicFormAttachServiceStackArtifact
+                    {
+                        ErrorCode = "ServerError",
+                        ErrorMessage = ex.Message
+                    }
+                };
+            }
         }
 
     }
