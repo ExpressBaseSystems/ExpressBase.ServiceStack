@@ -481,7 +481,7 @@ SELECT DISTINCT id FROM eb_form_drafts WHERE draft_type = @draft_type AND eb_cre
                 {
                     FileRefId = refId,
                     FileCategory = Common.Enums.EbFileCategory.Images
-                }, "/download/image", this.CurrentSolution.SolutionID, this.CurrentUser.UserId, this.CurrentUser.AuthId, ImageQuality.original, true);
+                }, "/download/image", this.CurrentSolution.SolutionID, 0, null, ImageQuality.original, true);
 
                 fileByte = response?.FileBytes;
             }

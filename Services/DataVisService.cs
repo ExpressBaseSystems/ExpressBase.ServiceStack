@@ -3126,7 +3126,7 @@ namespace ExpressBase.ServiceStack
                 {
                     FileRefId = refId,
                     FileCategory = Common.Enums.EbFileCategory.Images
-                }, "/download/image", this._ebSolution.SolutionID, currentUser.UserId, currentUser.AuthId, ImageQuality.original, true);
+                }, "/download/image", this._ebSolution.SolutionID, 0, null, ImageQuality.original, true);
 
                 fileByte = response?.FileBytes;
             }
@@ -3158,7 +3158,7 @@ namespace ExpressBase.ServiceStack
                 {
                     FileRefId = refId,
                     FileCategory = Common.Enums.EbFileCategory.Images
-                }, "/download/image", this._ebSolution.SolutionID, currentUser.UserId, currentUser.AuthId, ImageQuality.original, true);
+                }, "/download/image", this._ebSolution.SolutionID, 0, null, ImageQuality.original, true);
 
                 return new MemoryStream(response?.FileBytes);
             }
