@@ -94,6 +94,7 @@ namespace ExpressBase.ServiceStack
             MyJwtAuthProvider jwtprovider = new MyJwtAuthProvider
             {
                 HashAlgorithm = "RS256",
+                //TODO: base64 encode these in env
                 PrivateKeyXml = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_JWT_PRIVATE_KEY_XML),
                 PublicKeyXml = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_JWT_PUBLIC_KEY_XML),
                 //#if (DEBUG)
