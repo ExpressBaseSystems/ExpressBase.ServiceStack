@@ -1,23 +1,23 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using ExpressBase.Objects.ServiceStack_Artifacts;
+﻿using ExpressBase.Common;
+using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
-using System.Data.Common;
-using ExpressBase.Common;
-using ExpressBase.Security.Core;
 using ExpressBase.Common.Extensions;
-using ExpressBase.Common.Structures;
-using System.Globalization;
-using ServiceStack;
-using Newtonsoft.Json;
-using ExpressBase.Security;
-using ServiceStack.Auth;
+using ExpressBase.Common.Helpers;
 using ExpressBase.Common.LocationNSolution;
 using ExpressBase.Common.ServiceClients;
+using ExpressBase.Common.Structures;
+using ExpressBase.Objects.ServiceStack_Artifacts;
+using ExpressBase.Security;
+using ExpressBase.Security.Core;
+using Newtonsoft.Json;
+using ServiceStack;
+using ServiceStack.Auth;
 using ServiceStack.Messaging;
-using ExpressBase.Common.Constants;
-using ExpressBase.Common.Helpers;
+using System;
+using System.Collections.Generic;
+using System.Data.Common;
+using System.Globalization;
+using System.Linq;
 
 namespace ExpressBase.ServiceStack.Services
 {
@@ -1472,6 +1472,12 @@ WHERE COALESCE(u.eb_del, 'F') = 'F' AND COALESCE(ut.eb_del, 'F') = 'F' AND u.id 
 
             try
             {
+                if (Convert.ToString(request.Colvalues["IsAnonymous"]) == "T")
+                {
+                    this.Redis.Remove($"{request.SolnId}:1:uc:{RoutingConstants.WEB_BEARER_TOKEN}");
+                    this.Redis.Remove($"{request.SolnId}:1:uc:{RoutingConstants.WEB_REFRESH_TOKEN}");
+                }
+
                 UpdateUserIfPermissionChanged(request, OldPermission, OldUsers);
             }
             catch (Exception ex)
