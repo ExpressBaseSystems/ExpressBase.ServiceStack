@@ -1232,7 +1232,7 @@ $$");
             try
             {
                 Console.WriteLine("Start ImportFormData");
-                EbWebForm form = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId);
+                EbWebForm form = this.GetWebFormObject(request.RefId, request.UserAuthId, request.SolnId, request.CurrentLoc);
                 if (request.Type == ImportDataType.PowerSelect)
                 {
                     WebformData _FormData = JsonConvert.DeserializeObject<WebformData>(request.WebFormData);
