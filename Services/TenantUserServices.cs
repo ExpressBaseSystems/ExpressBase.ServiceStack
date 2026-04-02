@@ -480,7 +480,7 @@ namespace ExpressBase.ServiceStack.Services
                                 cust_id = (select cust_id from eb_customer where solution_id = '{0}')", solnId);
                 EbDataTable dt = this.InfraConnectionFactory.DataDB.DoQuery(query);
 
-                SolutionUsers.PlanUserCount = (dt.Rows.Count > 0) ? (int)dt.Rows[0]["user_no"] : 5; /// Hardcoding 5
+                SolutionUsers.PlanUserCount = (dt.Rows.Count > 0) ? Convert.ToInt32(dt.Rows[0]["user_no"]) : 5; /// Hardcoding 5
 
                 EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(solnId, this.Redis);
                 string sql = @"SELECT COUNT(*) FROM eb_users WHERE (statusid = 0 OR statusid = 1 OR statusid = 2) AND eb_del ='F';
@@ -495,8 +495,11 @@ namespace ExpressBase.ServiceStack.Services
                     {
                         SolutionUsers.UserList = new Dictionary<int, string>();
                         foreach (EbDataRow r in ds.Tables[1].Rows)
-                            if (!SolutionUsers.UserList.ContainsKey((int)r[0]))
-                                SolutionUsers.UserList[(int)r[0]] = r[1].ToString();
+                        {
+                            int userId = Convert.ToInt32(r[0]);
+                            if (!SolutionUsers.UserList.ContainsKey(userId))
+                                SolutionUsers.UserList[userId] = Convert.ToString(r[1]);
+                        }
                     }
                 }
             }
