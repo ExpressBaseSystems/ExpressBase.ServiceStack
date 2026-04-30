@@ -3139,6 +3139,50 @@ WHERE
             return resp;
         }
 
+        public AttDeviceGetLatestPunchRecordResp Post(AttDeviceGetLatestPunchRecordReq request)
+        {
+            AttDeviceGetLatestPunchRecordResp resp = new AttDeviceGetLatestPunchRecordResp();
+            try
+            {
+                string qry = "SELECT id, device_id, eb_loc_id, user_id, punch_time, verify_mode, inout_mode, work_code, eb_created_by, eb_created_at " +
+                    $"FROM eb_att_punch_records WHERE eb_del='F' AND eb_void='F' AND device_id=:device_id AND eb_loc_id=:location_id ORDER BY id DESC LIMIT 1;";
+
+                EbDataTable dt = this.EbConnectionFactory.DataDB.DoQuery(qry, new DbParameter[] {
+                    this.EbConnectionFactory.DataDB.GetNewParameter("device_id", EbDbTypes.String, request.deviceId),
+                    this.EbConnectionFactory.DataDB.GetNewParameter("location_id", EbDbTypes.Int32, request.locationId)
+                });
+
+                if (dt.Rows.Count > 0)
+                {
+                    resp.latestPunchRecord = new AttDeviceRawPunchRecord()
+                    {
+                        eb_id = Convert.ToInt32(dt.Rows[0]["id"]),
+                        eb_created_at = Convert.ToDateTime(dt.Rows[0]["eb_created_at"]).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                        eb_created_by = Convert.ToInt32(dt.Rows[0]["eb_created_by"]),
+
+                        userId = Convert.ToInt32(dt.Rows[0]["user_id"]),
+                        punchTime = Convert.ToDateTime(dt.Rows[0]["punch_time"]).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                        verifyMode = Convert.ToString(dt.Rows[0]["verify_mode"]),
+                        inOutMode = Convert.ToString(dt.Rows[0]["inout_mode"]),
+                        workCode = Convert.ToString(dt.Rows[0]["work_code"])
+                    };
+                    resp.status = 200;
+                }
+                else
+                {
+                    resp.errorMessage = "No punch record found";
+                    resp.status = 404;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception in AttDeviceSaveRawPunchRecords: " + ex.Message);
+                resp.errorMessage = ex.Message;
+                resp.status = 500;
+            }
+            return resp;
+        }
+
     }
 }
 
